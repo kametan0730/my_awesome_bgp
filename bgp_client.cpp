@@ -48,7 +48,7 @@ bool bgp_client_loop(int sock){
             open.header.length = htons(29);
             open.header.type = OPEN;
             open.version = 4;
-            open.my_as = htons(65017);
+            open.my_as = htons(64496);
             open.hold_time = htons(180);
             open.bgp_id = htons(11111);
             open.opt_length = 0;
