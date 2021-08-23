@@ -75,17 +75,42 @@ bool bgp_client_loop(int sock){
             while(read_length < 19+2+unfeasible_routes_length + 2 + total_path_attribute_length){
                 uint8_t flag = buff[read_length];
                 uint8_t type = buff[read_length+1];
-                log(log_level::INFO, "Path attribute type %x", type);
+                read_length += 2;
+                uint16_t attribute_len;
                 if(!(flag & EXTENDED_LENGTH)){
-                    uint8_t attribute_len = buff[read_length+2];
-                    read_length += (attribute_len+3);
+                    attribute_len = buff[read_length];
+                    read_length += 1;
                 }else{
-                    uint16_t attribute_len;
-
-                    memcpy(&attribute_len, &buff[read_length+2], 2);
+                    memcpy(&attribute_len, &buff[read_length], 2);
                     attribute_len = ntohs(attribute_len);
-                    read_length += (attribute_len+4);
+                    read_length += 2;
                 }
+                switch(type){
+                    case ORIGIN:
+                    {
+                        uint8_t origin = buff[read_length];
+                        log(log_level::INFO, "Origin %d", origin);
+                    }
+                        break;
+                    case AS_PATH:
+                    {
+                        uint8_t segment_type = buff[read_length];
+                        uint8_t segment_length = buff[read_length+1];
+                        log(log_level::INFO, "Seg type %d", segment_type);
+                        read_length += 2;
+                        hex_dump(&buff[read_length], 40);
+                        for(int i = 0; i < segment_length; i++){
+                            uint16_t asn;
+                            memcpy(&asn, &buff[read_length], 2);
+                            asn = ntohs(asn);
+                            log(log_level::INFO, "AS Path %d", asn);
+                            read_length += 2;
+                        }
+                        //hex_dump(&buff[read_length], attribute_len);
+                    }
+                        break;
+                }
+                read_length += attribute_len;
             }
             read_length = 19+2+unfeasible_routes_length+2+total_path_attribute_length;
             while(read_length < entire_length){

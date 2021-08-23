@@ -33,6 +33,13 @@ enum bgp_path_attribute_flag{
     OPTIONAL = 1 << 7
 };
 
+enum bgp_path_attribute_as_path_segment_type{
+    AS_SET = 1,
+    AS_SEQUENCE = 2,
+    AS_CONFED_SEQUENCE = 3,
+    AS_CONFED_SET = 4
+};
+
 struct bgp_header{
     unsigned char maker[16];
     uint16_t length;
