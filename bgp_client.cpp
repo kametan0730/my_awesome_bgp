@@ -101,10 +101,9 @@ bool bgp_client_loop(int sock){
                         hex_dump(&buff[read_length], 40);
                         for(int i = 0; i < segment_length; i++){
                             uint16_t asn;
-                            memcpy(&asn, &buff[read_length], 2);
+                            memcpy(&asn, &buff[read_length+i*2], 2);
                             asn = ntohs(asn);
                             log(log_level::INFO, "AS Path %d", asn);
-                            read_length += 2;
                         }
                         //hex_dump(&buff[read_length], attribute_len);
                     }
