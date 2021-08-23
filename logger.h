@@ -13,6 +13,9 @@ enum log_level{
 
 template <typename ... Args>
 void log(log_level level, const char *format, Args const & ... args){
+    if(level > INFO){
+        return;
+    }
     if(level == log_level::ERROR){
         fprintf(stderr, "[ERROR] ");
         fprintf(stderr, format, args...);

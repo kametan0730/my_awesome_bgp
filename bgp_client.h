@@ -10,12 +10,20 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-
 enum bgp_message_type{
     OPEN = 1,
     UPDATE = 2,
     NOTIFICATION = 3,
     KEEPALIVE = 4
+};
+
+enum bgp_path_attribute{
+    ORIGIN = 1,
+    AS_PATH = 2,
+    NEXT_HOP = 3,
+    MULTI_EXIT_DISC = 4,
+    LOCAL_PREF = 5,
+    ATOMIC_AGGREGATE = 6
 };
 
 struct bgp_header{
@@ -24,7 +32,7 @@ struct bgp_header{
     uint8_t type;
 } __attribute__((packed));
 
-struct bgp_open {
+struct bgp_open{
     bgp_header header;
     uint8_t version;
     uint16_t my_as;
@@ -33,7 +41,7 @@ struct bgp_open {
     uint8_t opt_length;
 } __attribute__((packed));
 
-struct bgp_notification {
+struct bgp_notification{
     bgp_header header;
     uint8_t error;
     uint16_t error_sub;

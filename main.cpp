@@ -12,7 +12,7 @@
 #include "bgp_client.h"
 #include "logger.h"
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]){
     int sock;
     fcntl(0, F_SETFL, O_NONBLOCK);
     struct sockaddr_in server_address;
@@ -37,7 +37,6 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
     log(log_level::INFO, "Connected to %s", inet_ntoa(server_address.sin_addr));
-
     while(true){
         if(getchar() == 'q'){
             close(sock);
@@ -50,4 +49,3 @@ int main(int argc, char* argv[]) {
     }
     return EXIT_SUCCESS;
 }
-

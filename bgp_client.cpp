@@ -34,7 +34,8 @@ bool bgp_client_loop(int sock){
     switch(bgphp->type){
         case OPEN:
         {
-            log(log_level::INFO, "\e[31mOpen Received");
+            printf("\e[31m");
+            log(log_level::INFO, "Open Received");
             auto* bgpopp = reinterpret_cast<bgp_open*>(buff);
             log(log_level::INFO, "Version: %d", bgpopp->version);
             log(log_level::INFO, "My AS: %d", ntohs(bgpopp->my_as));
@@ -47,7 +48,7 @@ bool bgp_client_loop(int sock){
             open.header.length = htons(29);
             open.header.type = OPEN;
             open.version = 4;
-            open.my_as = htons(1);
+            open.my_as = htons(65017);
             open.hold_time = htons(180);
             open.bgp_id = htons(11111);
             open.opt_length = 0;
@@ -57,9 +58,11 @@ bool bgp_client_loop(int sock){
                 return false;
             }
         }
-        break;
+            break;
         case UPDATE:
-            log(log_level::INFO, "\e[32mUpdate received");
+        {
+            printf("\e[32m");
+            log(log_level::INFO, "Update received");
             uint16_t unfeasible_routes_length;
             memcpy(&unfeasible_routes_length, &buff[19], 2);
             unfeasible_routes_length = ntohs(unfeasible_routes_length);
@@ -68,16 +71,55 @@ bool bgp_client_loop(int sock){
             memcpy(&total_path_attribute_length, &buff[19+2+unfeasible_routes_length], 2);
             total_path_attribute_length = ntohs(total_path_attribute_length);
             log(log_level::DEBUG, "%d", total_path_attribute_length);
+            int read_length = 19+2+unfeasible_routes_length + 2;
+            while(read_length < 19+2+unfeasible_routes_length + 2 + total_path_attribute_length){
+                uint8_t flag = buff[read_length];
+                uint8_t type = buff[read_length+1];
+                log(log_level::INFO, "Path attribute type %x", type);
+                if(!(flag & 0b00010000)){
+                    uint8_t attribute_len = buff[read_length+2];
+                    read_length += (attribute_len+3);
+                }else{
+                    uint16_t attribute_len;
+
+                    memcpy(&attribute_len, &buff[read_length+2], 2);
+                    attribute_len = ntohs(attribute_len);
+                    read_length += (attribute_len+4);
+                }
+            }
+            read_length = 19+2+unfeasible_routes_length+2+total_path_attribute_length;
+            while(read_length < entire_length){
+                int prefix = buff[read_length];
+                if(prefix <= 8){
+                    log(log_level::DEBUG, "%d.0.0.0/%d", buff[read_length+1], prefix);
+                    read_length += 2;
+                }else if(prefix <= 16){
+                    log(log_level::DEBUG, "%d.%d.0.0/%d", buff[read_length+1], buff[read_length+2], prefix);
+                    read_length += 3;
+                }else if(prefix <= 24){
+                    log(log_level::DEBUG, "%d.%d.%d.0/%d", buff[read_length+1], buff[read_length+2], buff[read_length+3], prefix);
+                    read_length += 4;
+                }else if(prefix <= 32){
+                    log(log_level::DEBUG, "%d.%d.%d.%d/%d", buff[read_length+1], buff[read_length+2], buff[read_length+3], buff[read_length+4], prefix);
+
+                    read_length += 5;
+                }else{
+                    log(log_level::ERROR, "Invalid packet");
+                }
+            }
+        }
             break;
         case NOTIFICATION:
         {
-            log(log_level::INFO, "\e[34mNotification received");
+            printf("\e[34m");
+            log(log_level::INFO, "Notification received");
             auto* bgpntp = reinterpret_cast<bgp_notification*>(buff);
             log(log_level::INFO, "Error: %d", bgpntp->error);
             log(log_level::INFO, "Sub: %d", bgpntp->error_sub);
         }
         case KEEPALIVE:
-            log(log_level::INFO, "\e[35mKeepalive Received");
+            printf("\e[35m");
+            log(log_level::INFO, "Keepalive Received");
             bgp_header header;
             memset(header.maker, 0xff, 16);
             header.length = htons(19);
@@ -88,7 +130,8 @@ bool bgp_client_loop(int sock){
             }
             break;
         default:
-            log(log_level::WARNING, "\e[7mUnknown type received %d", bgphp->type);
+            printf("\e[7m");
+            log(log_level::WARNING, "Unknown type received %d", bgphp->type);
             break;
     }
     return true;
