@@ -76,7 +76,7 @@ bool bgp_client_loop(int sock){
                 uint8_t flag = buff[read_length];
                 uint8_t type = buff[read_length+1];
                 log(log_level::INFO, "Path attribute type %x", type);
-                if(!(flag & 0b00010000)){
+                if(!(flag & EXTENDED_LENGTH)){
                     uint8_t attribute_len = buff[read_length+2];
                     read_length += (attribute_len+3);
                 }else{

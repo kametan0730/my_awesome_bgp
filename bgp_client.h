@@ -17,13 +17,20 @@ enum bgp_message_type{
     KEEPALIVE = 4
 };
 
-enum bgp_path_attribute{
+enum bgp_path_attribute_type{
     ORIGIN = 1,
     AS_PATH = 2,
     NEXT_HOP = 3,
     MULTI_EXIT_DISC = 4,
     LOCAL_PREF = 5,
     ATOMIC_AGGREGATE = 6
+};
+
+enum bgp_path_attribute_flag{
+    EXTENDED_LENGTH = 1 << 4,
+    PARTIAL = 1 << 5,
+    TRANSITIVE = 1 << 6,
+    OPTIONAL = 1 << 7
 };
 
 struct bgp_header{
