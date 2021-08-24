@@ -10,6 +10,12 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+/*
+struct bgp_peer{
+    int sock;
+    int state;
+};
+*/
 enum bgp_message_type{
     OPEN = 1,
     UPDATE = 2,

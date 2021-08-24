@@ -96,17 +96,42 @@ bool bgp_client_loop(int sock){
                     {
                         uint8_t segment_type = buff[read_length];
                         uint8_t segment_length = buff[read_length+1];
-                        log(log_level::INFO, "Seg type %d", segment_type);
-                        read_length += 2;
-                        hex_dump(&buff[read_length], 40);
+                        //read_length += 2;
+                        //hex_dump(&buff[read_length], 40);
                         for(int i = 0; i < segment_length; i++){
                             uint16_t asn;
-                            memcpy(&asn, &buff[read_length+i*2], 2);
+                            memcpy(&asn, &buff[read_length+2+i*2], 2);
                             asn = ntohs(asn);
-                            log(log_level::INFO, "AS Path %d", asn);
+                            //log(log_level::INFO, "AS Path %d", asn);
                         }
                         //hex_dump(&buff[read_length], attribute_len);
                     }
+                        break;
+                    case NEXT_HOP:
+                    {
+                        if(attribute_len == 4){
+                            log(log_level::INFO, "Next Hop %d.%d.%d.%d", buff[read_length], buff[read_length+1], buff[read_length+2], buff[read_length+3]);
+                        }else{
+                            hex_dump(&buff[read_length], attribute_len);
+                        }
+                    }
+                        break;
+                    case MULTI_EXIT_DISC:
+                        uint32_t med;
+                        memcpy(&med, &buff[read_length], 4);
+                        med = ntohl(med);
+                        log(log_level::INFO, "MED %d", med);
+                        break;
+                    case LOCAL_PREF:
+                    {
+                        uint32_t local_pref;
+                        memcpy(&local_pref, &buff[read_length], 4);
+                        local_pref = ntohl(local_pref);
+                        log(log_level::INFO, "Local Pref %d", local_pref);
+                    }
+                        break;
+                    default:
+                        log(log_level::INFO, "Unhandled path attribute type %d", type);
                         break;
                 }
                 read_length += attribute_len;
@@ -125,7 +150,6 @@ bool bgp_client_loop(int sock){
                     read_length += 4;
                 }else if(prefix <= 32){
                     log(log_level::DEBUG, "%d.%d.%d.%d/%d", buff[read_length+1], buff[read_length+2], buff[read_length+3], buff[read_length+4], prefix);
-
                     read_length += 5;
                 }else{
                     log(log_level::ERROR, "Invalid packet");
