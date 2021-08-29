@@ -8,9 +8,12 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <fstream>
+#include <nlohmann/json.hpp>
 
 #include "bgp_client.h"
 #include "logger.h"
+
 
 int main(int argc, char* argv[]){
     int sock;
@@ -18,6 +21,24 @@ int main(int argc, char* argv[]){
     struct sockaddr_in server_address;
 
     server_address.sin_family = AF_INET;
+
+    /*
+    std::ifstream fin("config.json", std::ios::out);
+    if(!fin.is_open()){
+        log(log_level::ERROR, "Failed to open config");
+        exit(EXIT_FAILURE);
+    }
+    nlohmann::json j;
+
+    try{
+        fin >> j;
+    }catch(nlohmann::detail::exception e){
+        log(log_level::ERROR, "Failed to load config");
+        exit(EXIT_FAILURE);
+    }
+
+    int asn = j["asn"];
+*/
 
     log(log_level::INFO, "Hello BGP!!");
 

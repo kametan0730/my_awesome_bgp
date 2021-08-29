@@ -66,12 +66,36 @@ bool bgp_client_loop(int sock){
             uint16_t unfeasible_routes_length;
             memcpy(&unfeasible_routes_length, &buff[19], 2);
             unfeasible_routes_length = ntohs(unfeasible_routes_length);
-            log(log_level::DEBUG, "%d", unfeasible_routes_length);
+            int read_length = 19+2;
+            if(unfeasible_routes_length != 0){
+                //hex_dump(&buff[read_length], unfeasible_routes_length);
+                //printf("\n");
+                while(read_length < 19+2+unfeasible_routes_length){
+                    int prefix = buff[read_length];
+                    if(prefix <= 8){
+                        log(log_level::DEBUG, "Unfeasible %d.0.0.0/%d", buff[read_length+1], prefix);
+                        read_length += 2;
+                    }else if(prefix <= 16){
+                        log(log_level::DEBUG, "Unfeasible %d.%d.0.0/%d", buff[read_length+1], buff[read_length+2], prefix);
+                        read_length += 3;
+                    }else if(prefix <= 24){
+                        log(log_level::DEBUG, "Unfeasible %d.%d.%d.0/%d", buff[read_length+1], buff[read_length+2], buff[read_length+3], prefix);
+                        read_length += 4;
+                    }else if(prefix <= 32){
+                        log(log_level::DEBUG, "Unfeasible %d.%d.%d.%d/%d", buff[read_length+1], buff[read_length+2], buff[read_length+3], buff[read_length+4], prefix);
+                        read_length += 5;
+                    }else{
+                        log(log_level::ERROR, "Invalid packet");
+                        exit(1);
+                    }
+
+                }
+            }
+
             uint16_t total_path_attribute_length;
             memcpy(&total_path_attribute_length, &buff[19+2+unfeasible_routes_length], 2);
             total_path_attribute_length = ntohs(total_path_attribute_length);
-            log(log_level::DEBUG, "%d", total_path_attribute_length);
-            int read_length = 19+2+unfeasible_routes_length + 2;
+            read_length = 19+2+unfeasible_routes_length + 2;
             while(read_length < 19+2+unfeasible_routes_length + 2 + total_path_attribute_length){
                 uint8_t flag = buff[read_length];
                 uint8_t type = buff[read_length+1];
@@ -129,6 +153,9 @@ bool bgp_client_loop(int sock){
                         local_pref = ntohl(local_pref);
                         log(log_level::INFO, "Local Pref %d", local_pref);
                     }
+                        break;
+                    case ATOMIC_AGGREGATE:
+                        log(log_level::INFO, "Atomic Aggregate");
                         break;
                     default:
                         log(log_level::INFO, "Unhandled path attribute type %d", type);

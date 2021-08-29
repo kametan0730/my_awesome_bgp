@@ -16,6 +16,9 @@ struct bgp_peer{
     int state;
 };
 */
+
+// https://www.iana.org/assignments/bgp-parameters/bgp-parameters.xhtml
+
 enum bgp_message_type{
     OPEN = 1,
     UPDATE = 2,
@@ -29,7 +32,19 @@ enum bgp_path_attribute_type{
     NEXT_HOP = 3,
     MULTI_EXIT_DISC = 4,
     LOCAL_PREF = 5,
-    ATOMIC_AGGREGATE = 6
+    ATOMIC_AGGREGATE = 6,
+    AGGREGATOR = 7,
+    COMMUNITY = 8,
+    ORIGINATOR_ID = 9,
+    CLUSTER_LIST = 10,
+    DPA = 11,
+    ADVERTISER = 12,
+    RCID_PATH = 13 ,
+    CLUSTER_ID = 13,
+    MP_REACH_NLRI = 14,
+    MP_UNREACH_NLRI = 15,
+    EXTENDED = 16,
+    AS4_PATH = 17,
 };
 
 enum bgp_path_attribute_flag{

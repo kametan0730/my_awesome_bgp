@@ -13,7 +13,7 @@ enum log_level{
 
 template <typename ... Args>
 void log(log_level level, const char *format, Args const & ... args){
-    if(level > INFO){
+    if(level > DEBUG){
         return;
     }
     if(level == log_level::ERROR){
