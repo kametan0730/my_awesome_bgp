@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 include(FetchContent)
 FetchContent_Populate(
         json
-        URL  https://github.com/nlohmann/json/releases/download/v3.10.0/include.zip
+        URL  https://github.com/nlohmann/json/releases/download/v3.10.2/include.zip
 )
 
 include_directories(${json_SOURCE_DIR}/single_include)

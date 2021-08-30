@@ -10,12 +10,19 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-/*
-struct bgp_peer{
+
+struct bgp_client_peer{
     int sock;
     int state;
+    struct sockaddr_in server_address;
+    short remote_as;
 };
-*/
+
+enum bgp_peer_state{
+    IDLE,
+    ACTIVE,
+    ESTABLISHED,
+};
 
 // https://www.iana.org/assignments/bgp-parameters/bgp-parameters.xhtml
 
@@ -46,6 +53,28 @@ enum bgp_path_attribute_type{
     EXTENDED = 16,
     AS4_PATH = 17,
 };
+
+enum bgp_error_code{
+    MESSAGE_HEADER_ERROR = 1,
+    OPEN_MESSAGE_ERROR = 2,
+    UPDATE_MESSAGE_ERROR = 3,
+    HOLD_TIMER_EXPIRED = 4,
+    FINITE_STATE_MACHINE_ERROR = 5,
+    CEASE = 6,
+    ROUTE_REFRESH_MESSAGE_ERROR = 7
+};
+
+enum bgp_open_optional_parameter_type{
+    AUTHENTICATION = 1,
+    CAPABILITIES = 2
+};
+
+enum bgp_capability_code{
+    MULTIPROTOCOL_EXTENSION_FOR_BGP4 = 1,
+    ROUTE_REFRESH_CAPABILITY_FOR_BGP4 = 2,
+    OUTBOUND_ROUTE_FILTERING_CAPABILITY = 3
+};
+
 
 enum bgp_path_attribute_flag{
     EXTENDED_LENGTH = 1 << 4,
@@ -83,6 +112,6 @@ struct bgp_notification{
     char data[];
 } __attribute__((packed));
 
-bool bgp_client_loop(int sock);
+bool bgp_client_loop(bgp_client_peer peer);
 
 #endif //MY_AWESOME_BGP_BGP_CLIENT_H

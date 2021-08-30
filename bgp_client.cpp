@@ -1,24 +1,35 @@
 #include "bgp_client.h"
 #include "logger.h"
 
-void hex_dump(unsigned char* buffer, int len){
+void hex_dump(unsigned char* buffer, int len, bool is_separate = false){
+    if(is_separate) printf("|");
     for (int i = 0; i < len; ++i) {
-        printf("%02x", buffer[i]);
+        if(is_separate){
+            printf("%02x|", buffer[i]);
+        }else{
+            printf("%02x", buffer[i]);
+        }
     }
     printf("\n");
 }
 
-bool bgp_client_loop(int sock){
+void disconnect_with_notification(){
+
+}
+
+bool bgp_client_loop(bgp_client_peer peer){
     int len;
-    unsigned char buff[100000];
+    unsigned char buff[10000];
     printf("\e[m");
-    memset(buff, 0x00, 100000);
-    len = recv(sock, &buff, 19, 0);
-    if(len == 0){
+    memset(buff, 0x00, 10000);
+    len = recv(peer.sock, &buff, 19, 0);
+    if(len <= 0){
         return true;
     }
+
     auto* bgphp = reinterpret_cast<bgp_header*>(buff);
 
+    // hex_dump(buff, 29); // dump header
     int entire_length = htons(bgphp->length);
     log(log_level::DEBUG, "Receiving %d bytes", entire_length);
 
@@ -26,7 +37,7 @@ bool bgp_client_loop(int sock){
     while(len < entire_length){
         remain_byte = entire_length - len;
         log(log_level::DEBUG, "%d bytes remain", remain_byte);
-        append_len = recv(sock, &buff[len], std::min(remain_byte, 1000), 0);
+        append_len = recv(peer.sock, &buff[len], std::min(remain_byte, 1000), 0);
         log(log_level::DEBUG, "New %d bytes received", append_len);
         len += append_len;
     }
@@ -53,7 +64,33 @@ bool bgp_client_loop(int sock){
             open.bgp_id = htons(11111);
             open.opt_length = 0;
 
-            if (send(sock, &open, 29, 0) <= 0) {
+            hex_dump(&buff[29], 54, true);
+
+            int read_length = 29;
+            while(read_length < 29 + bgpopp->opt_length){
+                int option_type = buff[read_length];
+                read_length++;
+                int option_length = buff[read_length];
+                read_length++;
+                switch(option_type){
+
+                    case bgp_open_optional_parameter_type::CAPABILITIES:
+                    {
+                        uint8_t capability_type = buff[read_length];
+                        read_length++;
+                        uint8_t capability_length = buff[read_length];
+                        read_length++;
+                        read_length += capability_length;
+                        log(INFO, "Capability type : %d", capability_type);
+                    }
+                        break;
+                    default:
+                        log(INFO, "Option type : %d", option_type);
+                        break;
+                }
+            }
+
+            if (send(peer.sock, &open, 29, 0) <= 0) {
                 log(log_level::ERROR, "Failed to send packet");
                 return false;
             }
@@ -88,7 +125,6 @@ bool bgp_client_loop(int sock){
                         log(log_level::ERROR, "Invalid packet");
                         exit(1);
                     }
-
                 }
             }
 
@@ -199,7 +235,7 @@ bool bgp_client_loop(int sock){
             memset(header.maker, 0xff, 16);
             header.length = htons(19);
             header.type = KEEPALIVE;
-            if (send(sock, &header, len, 0) <= 0) {
+            if (send(peer.sock, &header, len, 0) <= 0) {
                 log(log_level::ERROR, "Failed to send packet");
                 return false;
             }
