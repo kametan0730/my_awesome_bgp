@@ -11,6 +11,8 @@
 #include <fstream>
 #include <poll.h>
 #include <csignal>
+#include <chrono>
+#include <unistd.h>
 #include <nlohmann/json.hpp>
 
 #include "bgp_client.h"
@@ -27,6 +29,7 @@ void signal_handler(int sig){
 }
 
 int main(){
+    std::chrono::system_clock::time_point up = std::chrono::system_clock::now();
 
     struct sigaction act, old_act;
 
@@ -53,7 +56,7 @@ int main(){
 
     try{
         conf_file >> conf_json;
-    }catch(nlohmann::detail::exception e){
+    }catch(nlohmann::detail::exception &e){
         log(log_level::ERROR, "Failed to load config");
         exit(EXIT_FAILURE);
     }
@@ -62,13 +65,13 @@ int main(){
     log(log_level::INFO, "Succeed to load config");
 
     my_as = conf_json.at("my_as").get<int>();
-    log(INFO, "My AS: %d", my_as);
+    log(log_level::INFO, "My AS: %d", my_as);
 
-    for (auto& neighbor : conf_json.at("neighbors")) {
+    for(auto &neighbor: conf_json.at("neighbors")){
         bgp_client_peer peer{
-            .sock = 0,
-            .state = ACTIVE,
-            .remote_as = neighbor.at("remote-as")
+                .sock = 0,
+                .state = ACTIVE,
+                .remote_as = neighbor.at("remote-as")
         };
         peer.server_address.sin_family = AF_INET;
 
@@ -86,12 +89,13 @@ int main(){
             break;
         }
 
-        for (int i = 0; i < peers.size(); ++i) {
+        for(int i = 0; i < peers.size(); ++i){
             log_id = i + 1;
             if(!bgp_client_loop(&peers[i])){
-                break;
             }
         }
+        log_id = 0;
+
     }
     return EXIT_SUCCESS;
 }

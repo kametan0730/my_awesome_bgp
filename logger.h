@@ -5,17 +5,18 @@
 
 extern uint8_t log_id;
 
-enum log_level{
+enum class log_level{
     ERROR,
     WARNING,
     NOTICE,
     INFO,
-    DEBUG
+    DEBUG,
+    TRACE
 };
 
 template <typename ... Args>
 void log(log_level level, const char *format, Args const & ... args){
-    if(level > DEBUG){
+    if(level > log_level::TRACE){
         return;
     }
     if(level == log_level::ERROR){
@@ -37,6 +38,11 @@ void log(log_level level, const char *format, Args const & ... args){
             break;
         case log_level::DEBUG:
             printf("[DEBUG] ");
+            break;
+        case log_level::TRACE:
+            printf("[TRACE] ");
+            break;
+        case log_level::ERROR:
             break;
     }
     printf(format, args ...);

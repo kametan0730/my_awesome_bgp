@@ -110,7 +110,7 @@ struct bgp_notification{
     bgp_header header;
     uint8_t error;
     uint16_t error_sub;
-    char data[];
+    unsigned char data[];
 } __attribute__((packed));
 
 bool send_open(bgp_client_peer* peer);

@@ -6,7 +6,7 @@
 #include "logger.h"
 #include "tcp_socket.h"
 
-void hex_dump(unsigned char *buffer, int len, bool is_separate = false){
+void hex_dump(unsigned char* buffer, int len, bool is_separate = false){
     if(is_separate) printf("|");
     for(int i = 0; i < len; ++i){
         if(is_separate){
@@ -18,8 +18,17 @@ void hex_dump(unsigned char *buffer, int len, bool is_separate = false){
     printf("\n");
 }
 
-void disconnect_with_notification(){
-
+bool send_notification(bgp_client_peer* peer, int8_t error, uint16_t error_sub){
+    bgp_notification notification;
+    memset(notification.header.maker, 0xff, 16);
+    notification.header.length = htons(19);
+    notification.header.type = NOTIFICATION;
+    notification.error = error;
+    notification.error_sub = htons(error_sub);
+    if(send(peer->sock, &notification, 19, 0) <= 0){
+        return false;
+    }
+    return true;
 }
 
 bool send_open(bgp_client_peer* peer){
@@ -45,15 +54,13 @@ bool try_to_connect(bgp_client_peer* peer){
         log(log_level::ERROR, "Failed to create socket");
         return false;
     }
-    if(connect_with_timeout(peer->sock, (struct sockaddr *) &peer->server_address, sizeof(peer->server_address), 1000) < 0){
+    if(connect_with_timeout(peer->sock, (struct sockaddr*) &peer->server_address, sizeof(peer->server_address), 1000) < 0){
 
-        if(errno == EINTR)
-            fprintf(stderr, "Connect timeout\n");
-        else
-            fprintf(stderr, "Connect failed\n");
-
-        log(log_level::ERROR, "Failed to connect server");
-
+        if(errno == EINTR){
+            log(log_level::ERROR, "Timeout to connect server");
+        }else{
+            log(log_level::ERROR, "Failed to connect server");
+        }
         return false;
     }
 
@@ -64,26 +71,25 @@ bool try_to_connect(bgp_client_peer* peer){
 
 bool loop_established(bgp_client_peer* peer){
     int len;
-    unsigned char buff[10000];
+    unsigned char buff[100000];
     printf("\e[m");
     memset(buff, 0x00, 10000);
     len = recv(peer->sock, &buff, 19, 0);
     if(len <= 0){
         return true;
     }
-
-    auto *bgphp = reinterpret_cast<bgp_header *>(buff);
+    auto* bgphp = reinterpret_cast<bgp_header*>(buff);
 
     // hex_dump(buff, 29); // dump header
-    int entire_length = htons(bgphp->length);
-    log(log_level::DEBUG, "Receiving %d bytes", entire_length);
+    int entire_length = ntohs(bgphp->length);
+    log(log_level::TRACE, "Receiving %d bytes", entire_length);
 
     int append_len, remain_byte;
     while(len < entire_length){
         remain_byte = entire_length - len;
-        log(log_level::DEBUG, "%d bytes remain", remain_byte);
+        log(log_level::TRACE, "%d bytes remain", remain_byte);
         append_len = recv(peer->sock, &buff[len], std::min(remain_byte, 1000), 0);
-        log(log_level::DEBUG, "New %d bytes received", append_len);
+        log(log_level::TRACE, "New %d bytes received", append_len);
         len += append_len;
     }
 
@@ -91,14 +97,14 @@ bool loop_established(bgp_client_peer* peer){
         case OPEN:{
             printf("\e[31m");
             log(log_level::INFO, "Open Received");
-            auto *bgpopp = reinterpret_cast<bgp_open *>(buff);
+            auto* bgpopp = reinterpret_cast<bgp_open*>(buff);
             log(log_level::INFO, "Version: %d", bgpopp->version);
             log(log_level::INFO, "My AS: %d", ntohs(bgpopp->my_as));
             log(log_level::INFO, "Hold Time: %d", ntohs(bgpopp->hold_time));
             log(log_level::INFO, "BGP Id: %d", ntohl(bgpopp->bgp_id));
             log(log_level::INFO, "Opt Length: %d", bgpopp->opt_length);
 
-            hex_dump(&buff[29], 54, true);
+            // hex_dump(&buff[29], 54, true);
 
             int read_length = 29;
             while(read_length < 29 + bgpopp->opt_length){
@@ -113,11 +119,11 @@ bool loop_established(bgp_client_peer* peer){
                         uint8_t capability_length = buff[read_length];
                         read_length++;
                         read_length += capability_length;
-                        log(INFO, "Capability type : %d", capability_type);
+                        log(log_level::INFO, "Capability type : %d", capability_type);
                     }
                         break;
                     default:
-                        log(INFO, "Option type : %d", option_type);
+                        log(log_level::INFO, "Option type : %d", option_type);
                         break;
                 }
             }
@@ -240,7 +246,7 @@ bool loop_established(bgp_client_peer* peer){
 
             while(read_length < entire_length){
                 int prefix = buff[read_length];
-                log(DEBUG, "Prefix: %d", prefix);
+                log(log_level::DEBUG, "Prefix: %d", prefix);
                 if(prefix <= 8){
                     log(log_level::DEBUG, "%d.0.0.0/%d", buff[read_length + 1], prefix);
                     read_length += 2;
@@ -266,7 +272,7 @@ bool loop_established(bgp_client_peer* peer){
         case NOTIFICATION:{
             printf("\e[34m");
             log(log_level::INFO, "Notification received");
-            auto *bgpntp = reinterpret_cast<bgp_notification *>(buff);
+            auto* bgpntp = reinterpret_cast<bgp_notification*>(buff);
             log(log_level::INFO, "Error: %d", bgpntp->error);
             log(log_level::INFO, "Sub: %d", ntohs(bgpntp->error_sub));
         }
@@ -301,4 +307,5 @@ bool bgp_client_loop(bgp_client_peer* peer){
             loop_established(peer);
             break;
     }
+    return true;
 }

@@ -13,7 +13,7 @@ void set_nonblocking(int sockfd){
 
 // https://stackoverflow.com/questions/2597608/c-socket-connection-timeout
 
-int connect_with_timeout(int sockfd, const struct sockaddr *addr, socklen_t addrlen, unsigned int timeout_ms){
+int connect_with_timeout(int sockfd, const struct sockaddr* addr, socklen_t addrlen, unsigned int timeout_ms){
     int rc = 0;
     // Set O_NONBLOCK
     int sockfd_flags_before;
