@@ -1,7 +1,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <fstream>
-
 #include "bgp_client.h"
 #include "logger.h"
 #include "tcp_socket.h"
@@ -80,7 +79,7 @@ bool loop_established(bgp_client_peer* peer){
     }
     auto* bgphp = reinterpret_cast<bgp_header*>(buff);
 
-    // hex_dump(buff, 29); // dump header
+    hex_dump(buff, 29); // dump header
     int entire_length = ntohs(bgphp->length);
     log(log_level::TRACE, "Receiving %d bytes", entire_length);
 
@@ -171,7 +170,6 @@ bool loop_established(bgp_client_peer* peer){
                         exit(1);
                     }
                 }
-
             }
 
             uint16_t total_path_attribute_length;

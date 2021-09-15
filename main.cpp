@@ -83,7 +83,9 @@ int main(){
         peers.push_back(peer);
     }
 
+    std::chrono::system_clock::time_point start, end;
     while(true){
+        start = std::chrono::system_clock::now();
         if(getchar() == 'q'){
             log(log_level::INFO, "Good bye");
             break;
@@ -96,6 +98,12 @@ int main(){
         }
         log_id = 0;
 
+        end = std::chrono::system_clock::now();
+        uint64_t real_time = std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
+        uint64_t loop_time = 1000; // 0.001 sec
+        if(loop_time > real_time){
+            usleep(loop_time - real_time);
+        }
     }
     return EXIT_SUCCESS;
 }
