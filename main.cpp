@@ -9,26 +9,42 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <fstream>
+#include <poll.h>
+#include <csignal>
 #include <nlohmann/json.hpp>
 
 #include "bgp_client.h"
 #include "logger.h"
 
+#define CONFIG_PATH "../config.json"
+
 std::vector<bgp_client_peer> peers;
 
-void set_nonblocking(int sockfd)
-{
-    int val;
-    val = fcntl(sockfd, F_GETFL, 0);
-    fcntl(sockfd, F_SETFL, val | O_NONBLOCK);
+uint32_t my_as;
+uint8_t log_id;
+
+void signal_handler(int sig){
 }
 
-
 int main(){
+
+    struct sigaction act, old_act;
+
+    act.sa_handler = signal_handler;
+    sigemptyset(&act.sa_mask);
+    act.sa_flags = 0;
+
+    act.sa_flags |= SA_INTERRUPT;
+
+    if(sigaction(SIGALRM, &act, &old_act) < 0){
+        fprintf(stderr, "Error registering signal disposition\n");
+        exit(1);
+    }
+    log_id = 0;
     log(log_level::INFO, "Hello BGP!!");
     fcntl(0, F_SETFL, O_NONBLOCK);
 
-    std::ifstream conf_file("config.json", std::ios::in);
+    std::ifstream conf_file(CONFIG_PATH, std::ios::in);
     if(!conf_file.is_open()){
         log(log_level::ERROR, "Failed to open config");
         exit(EXIT_FAILURE);
@@ -43,9 +59,10 @@ int main(){
     }
     conf_file.close();
 
-    log(log_level::ERROR, "Succeed to load config");
-    //conf_json.at("asn").get<int>();
-    log(INFO, "My AS: %d", conf_json.at("asn").get<int>());
+    log(log_level::INFO, "Succeed to load config");
+
+    my_as = conf_json.at("my_as").get<int>();
+    log(INFO, "My AS: %d", my_as);
 
     for (auto& neighbor : conf_json.at("neighbors")) {
         bgp_client_peer peer{
@@ -59,21 +76,8 @@ int main(){
             log(log_level::ERROR, "Invalid IP address");
             exit(EXIT_FAILURE);
         }
+        peer.state = IDLE;
         peers.push_back(peer);
-    }
-
-    for (auto & peer : peers) {
-        peer.server_address.sin_port = htons(179);
-        if((peer.sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0 ){
-            log(log_level::ERROR, "Failed to create socket");
-            exit(EXIT_FAILURE);
-        }
-        if(connect(peer.sock, (struct sockaddr*) &peer.server_address, sizeof(peer.server_address)) < 0){
-            log(log_level::ERROR, "Failed to connect server");
-            exit(EXIT_FAILURE);
-        }
-        set_nonblocking(peer.sock);
-        log(log_level::INFO, "Connected to %s", inet_ntoa(peer.server_address.sin_addr));
     }
 
     while(true){
@@ -81,8 +85,10 @@ int main(){
             log(log_level::INFO, "Good bye");
             break;
         }
-        for (auto & peer : peers) {
-            if(!bgp_client_loop(peer)){
+
+        for (int i = 0; i < peers.size(); ++i) {
+            log_id = i + 1;
+            if(!bgp_client_loop(&peers[i])){
                 break;
             }
         }

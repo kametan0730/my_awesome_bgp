@@ -3,6 +3,8 @@
 
 #include <cstdio>
 
+extern uint8_t log_id;
+
 enum log_level{
     ERROR,
     WARNING,
@@ -17,11 +19,12 @@ void log(log_level level, const char *format, Args const & ... args){
         return;
     }
     if(level == log_level::ERROR){
-        fprintf(stderr, "[ERROR] ");
+        fprintf(stderr, "[%d][ERROR] ", log_id);
         fprintf(stderr, format, args...);
         fprintf(stderr, "\n");
         return;
     }
+    printf("[%d]", log_id);
     switch(level){
         case log_level::WARNING:
             printf("[WARNING] ");

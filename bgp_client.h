@@ -10,6 +10,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+extern uint32_t my_as;
 
 struct bgp_client_peer{
     int sock;
@@ -112,6 +113,7 @@ struct bgp_notification{
     char data[];
 } __attribute__((packed));
 
-bool bgp_client_loop(bgp_client_peer peer);
+bool send_open(bgp_client_peer* peer);
+bool bgp_client_loop(bgp_client_peer* peer);
 
 #endif //MY_AWESOME_BGP_BGP_CLIENT_H
