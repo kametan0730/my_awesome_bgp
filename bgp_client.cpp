@@ -154,27 +154,38 @@ bool loop_established(bgp_client_peer* peer){
             if(unfeasible_routes_length != 0){
                 //hex_dump(&buff[read_length], unfeasible_routes_length);
                 //printf("\n");
-
+                uint32_t unfeasible_prefix;
                 while(read_length < 19 + 2 + unfeasible_routes_length){
                     int prefix_len = buff[read_length];
                     if(prefix_len <= 8){
+                        unfeasible_prefix = buff[read_length + 1]*256*256*256;
                         log(log_level::DEBUG, "Unfeasible %d.0.0.0/%d", buff[read_length + 1], prefix_len);
                         read_length += 2;
                     }else if(prefix_len <= 16){
+                        unfeasible_prefix = buff[read_length + 1]*256*256*256 + buff[read_length + 2]*256*256;
                         log(log_level::DEBUG, "Unfeasible %d.%d.0.0/%d", buff[read_length + 1], buff[read_length + 2],
                             prefix_len);
                         read_length += 3;
                     }else if(prefix_len <= 24){
+                        unfeasible_prefix = buff[read_length + 1]*256*256*256 + buff[read_length + 2]*256*256 + buff[read_length + 3]*256;
                         log(log_level::DEBUG, "Unfeasible %d.%d.%d.0/%d", buff[read_length + 1], buff[read_length + 2],
                             buff[read_length + 3], prefix_len);
                         read_length += 4;
                     }else if(prefix_len <= 32){
+                        unfeasible_prefix = buff[read_length + 1]*256*256*256 + buff[read_length + 2]*256*256 + buff[read_length + 3]*256 + buff[read_length + 4];
                         log(log_level::DEBUG, "Unfeasible %d.%d.%d.%d/%d", buff[read_length + 1], buff[read_length + 2],
                             buff[read_length + 3], buff[read_length + 4], prefix_len);
                         read_length += 5;
                     }else{
                         log(log_level::ERROR, "Invalid packet");
                         exit(1);
+                    }
+                    node* unfeasible_prefix_node = search_prefix(peer->rib, unfeasible_prefix, prefix_len);
+                    if(unfeasible_prefix_node->prefix_len == prefix_len){
+                        delete_prefix(unfeasible_prefix_node);
+                        log(log_level::DEBUG, "Withdraw success!");
+                    }else{
+                        log(log_level::ERROR, "Failed to withdraw %s/%d", inet_ntoa(in_addr{.s_addr = htonl(unfeasible_prefix)}), prefix_len);
                     }
                 }
             }

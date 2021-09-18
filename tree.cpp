@@ -48,6 +48,11 @@ void assert_tree(node* node){
     }
 }
 
+/**
+ *
+ * @param prefix 削除するノード
+ * @param is_delete_child_prefix Trueの場合は子要素をすべて削除する
+ */
 void delete_prefix(node* prefix, bool is_delete_child_prefix){
     prefix->is_prefix = false; // 削除対象のプレフィックスはプレフィックス扱いしない
     prefix->next_hop = 0;
@@ -80,18 +85,29 @@ void delete_prefix(node* prefix, bool is_delete_child_prefix){
     }
 }
 
-node* search_prefix(node* root, uint32_t address, uint8_t max){
+/**
+ *
+ * @param root 検索を行う木構造の根
+ * @param address 検索するアドレス
+ * @param max_prefix_len 検索するノードの最大プレフィックス長
+ * @param is_prefix_strict Trueの場合はmax_prefix_lenのプレフィックス長のノードが見つからなければnullptrを返す
+ * @return　
+ */
+node* search_prefix(node* root, uint32_t address, uint8_t max_prefix_len, bool is_prefix_strict){
     node* current = root;
     node* next;
     node* match_node = root;
     uint8_t i = 0;
-    while(i < max){
-        if(current->is_prefix){
-            match_node = current;
-        }
+    while(i < max_prefix_len){
         next = (check_bit(address, i) ? current->node_1 : current->node_0);
         if(next == nullptr){
+            if(is_prefix_strict){
+                return nullptr;
+            }
             return match_node;
+        }
+        if(next->is_prefix){
+            match_node = next;
         }
         i++;
         current = next;
@@ -99,6 +115,14 @@ node* search_prefix(node* root, uint32_t address, uint8_t max){
     return match_node;
 }
 
+/**
+ *
+ * @param root 追加を行う木構造の根
+ * @param prefix 追加するアドレスプレフィックス
+ * @param prefix_len 追加するアドレスプレフィックスのプレフィックス長
+ * @param next_hop 追加するネクストホップ
+ * @return
+ */
 node* add_prefix(node* root, uint32_t prefix, uint8_t prefix_len, uint32_t next_hop){
     node* current = search_prefix(root, prefix, prefix_len-1);
     uint8_t res_prefix_len = current->prefix_len;
