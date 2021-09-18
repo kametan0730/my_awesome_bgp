@@ -21,11 +21,15 @@ struct bgp_client_peer{
     node* rib;
     struct sockaddr_in server_address;
     short remote_as;
+    int connect_cool_time;
 };
 
 enum bgp_peer_state{
     IDLE,
+    CONNECT,
     ACTIVE,
+    OPEN_SENT,
+    OPEN_CONFIRM,
     ESTABLISHED,
 };
 

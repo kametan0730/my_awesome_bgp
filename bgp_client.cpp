@@ -189,7 +189,7 @@ bool loop_established(bgp_client_peer* peer){
                     }
                 }
             }
-            uint32_t nexthop;
+            uint32_t next_hop;
             uint16_t total_path_attribute_length;
             memcpy(&total_path_attribute_length, &buff[19 + 2 + unfeasible_routes_length], 2);
             total_path_attribute_length = ntohs(total_path_attribute_length);
@@ -231,7 +231,7 @@ bool loop_established(bgp_client_peer* peer){
                         if(attribute_len == 4){
                             log(log_level::INFO, "Next Hop %d.%d.%d.%d", buff[read_length], buff[read_length + 1],
                                 buff[read_length + 2], buff[read_length + 3]);
-                            nexthop = buff[read_length]*256*256*256 + buff[read_length + 1]*256*256 + buff[read_length + 2]*256 + buff[read_length + 3];
+                            next_hop = buff[read_length]*256*256*256 + buff[read_length + 1]*256*256 + buff[read_length + 2]*256 + buff[read_length + 3];
 
                         }else{
                             //log(log_level::ERROR, "ERR");
@@ -289,8 +289,7 @@ bool loop_established(bgp_client_peer* peer){
                     log(log_level::ERROR, "Invalid packet");
                     break;
                 }
-                add_prefix(peer->rib, prefix, prefix_len, nexthop);
-                log(log_level::DEBUG, "Prefix:%d, Nexthop:%d", prefix, nexthop);
+                add_prefix(peer->rib, prefix, prefix_len, next_hop);
             }
         }
             break;
@@ -300,9 +299,12 @@ bool loop_established(bgp_client_peer* peer){
             auto* bgpntp = reinterpret_cast<bgp_notification*>(buff);
             log(log_level::NOTICE, "Error: %d", bgpntp->error);
             log(log_level::NOTICE, "Sub: %d", bgpntp->error_sub);
-            break;
+            return false;
         }
         case KEEPALIVE:
+            if(peer->state == OPEN_CONFIRM){
+                peer->state = ESTABLISHED;
+            }
             printf("\e[35m");
             log(log_level::INFO, "Keepalive Received");
             bgp_header header;
@@ -325,12 +327,20 @@ bool loop_established(bgp_client_peer* peer){
 bool bgp_client_loop(bgp_client_peer* peer){
     switch(peer->state){
         case IDLE:
-            if(try_to_connect(peer)){
-                peer->state = ESTABLISHED;
+            if(peer->connect_cool_time == 0){
+                if(try_to_connect(peer)){
+                    peer->state = OPEN_CONFIRM;
+                }
+                peer->connect_cool_time = 2000;
+            }else{
+                peer->connect_cool_time--;
             }
             break;
+        case OPEN_CONFIRM:
         case ESTABLISHED:
-            loop_established(peer);
+            if(!loop_established(peer)){
+                peer->state = IDLE;
+            }
             break;
     }
     return true;

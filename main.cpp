@@ -92,6 +92,7 @@ int main(){
         root->node_0 = nullptr;
         root->node_1 = nullptr;
         peer.rib = root;
+        peer.connect_cool_time = 0;
         peers.push_back(peer);
     }
 
