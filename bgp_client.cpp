@@ -79,7 +79,7 @@ bool try_to_connect(bgp_client_peer* peer){
 bool loop_established(bgp_client_peer* peer){
     int len;
     unsigned char buff[100000];
-    printf("\e[m");
+    //printf("\e[m");
     memset(buff, 0x00, 10000);
     len = recv(peer->sock, &buff, 19, 0);
     if(len <= 0){
@@ -102,7 +102,6 @@ bool loop_established(bgp_client_peer* peer){
 
     switch(bgphp->type){
         case OPEN:{
-            printf("\e[31m");
             log(log_level::INFO, "Open Received");
             auto* bgpopp = reinterpret_cast<bgp_open*>(buff);
             log(log_level::INFO, "Version: %d", bgpopp->version);
@@ -142,7 +141,6 @@ bool loop_established(bgp_client_peer* peer){
         }
             break;
         case UPDATE:{
-            printf("\e[32m");
             log(log_level::INFO, "Update received");
             uint16_t unfeasible_routes_length;
 
@@ -294,7 +292,6 @@ bool loop_established(bgp_client_peer* peer){
         }
             break;
         case NOTIFICATION:{
-            printf("\e[34m");
             log(log_level::NOTICE, "Notification received");
             auto* bgpntp = reinterpret_cast<bgp_notification*>(buff);
             log(log_level::NOTICE, "Error: %d", bgpntp->error);
@@ -305,7 +302,6 @@ bool loop_established(bgp_client_peer* peer){
             if(peer->state == OPEN_CONFIRM){
                 peer->state = ESTABLISHED;
             }
-            printf("\e[35m");
             log(log_level::INFO, "Keepalive Received");
             bgp_header header;
             memset(header.maker, 0xff, 16);
