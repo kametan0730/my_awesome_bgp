@@ -10,11 +10,15 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "tree.h"
+
 extern uint32_t my_as;
+extern uint8_t console_mode;
 
 struct bgp_client_peer{
     int sock;
     int state;
+    node* rib;
     struct sockaddr_in server_address;
     short remote_as;
 };
@@ -76,7 +80,6 @@ enum bgp_capability_code{
     OUTBOUND_ROUTE_FILTERING_CAPABILITY = 3
 };
 
-
 enum bgp_path_attribute_flag{
     EXTENDED_LENGTH = 1 << 4,
     PARTIAL = 1 << 5,
@@ -104,12 +107,13 @@ struct bgp_open{
     uint16_t hold_time;
     uint32_t bgp_id;
     uint8_t opt_length;
+    unsigned char option[];
 } __attribute__((packed));
 
 struct bgp_notification{
     bgp_header header;
     uint8_t error;
-    uint16_t error_sub;
+    uint8_t error_sub;
     unsigned char data[];
 } __attribute__((packed));
 

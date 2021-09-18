@@ -4,6 +4,7 @@
 #include <cstdio>
 
 extern uint8_t log_id;
+extern uint8_t console_mode;
 
 enum class log_level{
     ERROR,
@@ -15,7 +16,20 @@ enum class log_level{
 };
 
 template <typename ... Args>
+void console(const char *format, Args const & ... args){
+    if(console_mode == 0){
+        return;
+    }
+    printf("[CONSOLE] ");
+    printf(format, args ...);
+    printf("\n");
+}
+
+template <typename ... Args>
 void log(log_level level, const char *format, Args const & ... args){
+    if(console_mode == 1 and level > log_level::NOTICE){
+        return;
+    }
     if(level > log_level::TRACE){
         return;
     }

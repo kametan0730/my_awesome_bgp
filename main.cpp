@@ -16,7 +16,9 @@
 #include <nlohmann/json.hpp>
 
 #include "bgp_client.h"
+#include "command.h"
 #include "logger.h"
+#include "tree.h"
 
 #define CONFIG_PATH "../config.json"
 
@@ -24,6 +26,7 @@ std::vector<bgp_client_peer> peers;
 
 uint32_t my_as;
 uint8_t log_id;
+uint8_t console_mode = 0;
 
 void signal_handler(int sig){
 }
@@ -80,15 +83,50 @@ int main(){
             exit(EXIT_FAILURE);
         }
         peer.state = IDLE;
+        node* root = (node*) malloc(sizeof(node));
+        root->is_prefix = true;
+        root->parent = nullptr;
+        root->node_0 = nullptr;
+        root->node_1 = nullptr;
+        peer.rib = root;
         peers.push_back(peer);
     }
 
     std::chrono::system_clock::time_point start, end;
+    uint64_t real_time;
     while(true){
         start = std::chrono::system_clock::now();
-        if(getchar() == 'q'){
-            log(log_level::INFO, "Good bye");
-            break;
+        char input = getchar();
+        if(console_mode == 0){
+            if(input == 'q'){
+                log(log_level::INFO, "Good bye");
+                break;
+            }else if(input == 'b'){
+                raise(SIGINT);
+            }else if(input == 'c'){
+                console_mode = 1;
+                printf("Switched into command mode\n");
+            }
+        }else{
+            static char command[256];
+            static uint8_t offset = 0;
+            if(input != -1){
+                if(input > 0x20 and input < 0x7e){
+                    command[offset] = input;
+                    command[++offset] = '\0';
+                }else if(input == 0x0a){
+                    if(strcmp(command, "exit") == 0){
+                        console_mode = 0;
+                        printf("Switched into log mode\n");
+                    }else if(strcmp(command, "break") == 0){
+                        raise(SIGINT);
+                    }else{
+                        execute_command(command);
+                    }
+                    memset(command, 0, 255);
+                    offset = 0;
+                }
+            }
         }
 
         for(int i = 0; i < peers.size(); ++i){
@@ -99,10 +137,9 @@ int main(){
         log_id = 0;
 
         end = std::chrono::system_clock::now();
-        uint64_t real_time = std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
-        uint64_t loop_time = 1000; // 0.001 sec
-        if(loop_time > real_time){
-            usleep(loop_time - real_time);
+        real_time = std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
+        if(1000 > real_time){ // もしこのループにかかった時間が0.001秒未満なら
+            usleep(1000 - real_time); //　0.001秒に満たない時間分ループが終わるのを待つ
         }
     }
     return EXIT_SUCCESS;

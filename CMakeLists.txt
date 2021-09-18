@@ -11,4 +11,4 @@ FetchContent_Populate(
 
 include_directories(${json_SOURCE_DIR}/single_include)
 
-add_executable(my_awesome_bgp main.cpp logger.h bgp_client.cpp bgp_client.h tcp_socket.cpp tcp_socket.h)
+add_executable(my_awesome_bgp main.cpp logger.h bgp_client.cpp bgp_client.h tcp_socket.cpp tcp_socket.h tree.cpp tree.h command.cpp command.h)

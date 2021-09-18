@@ -1,11 +1,16 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <fstream>
+
 #include "bgp_client.h"
 #include "logger.h"
 #include "tcp_socket.h"
+#include "tree.h"
 
 void hex_dump(unsigned char* buffer, int len, bool is_separate = false){
+    if(console_mode == 1){
+        return;
+    }
     if(is_separate) printf("|");
     for(int i = 0; i < len; ++i){
         if(is_separate){
@@ -29,6 +34,7 @@ bool send_notification(bgp_client_peer* peer, int8_t error, uint16_t error_sub){
     }
     return true;
 }
+
 
 bool send_open(bgp_client_peer* peer){
     bgp_open open;
@@ -65,6 +71,8 @@ bool try_to_connect(bgp_client_peer* peer){
 
     set_nonblocking(peer->sock);
     log(log_level::INFO, "Connected to %s", inet_ntoa(peer->server_address.sin_addr));
+
+    //send_open(peer);
     return true;
 }
 
@@ -147,23 +155,22 @@ bool loop_established(bgp_client_peer* peer){
                 //hex_dump(&buff[read_length], unfeasible_routes_length);
                 //printf("\n");
 
-
                 while(read_length < 19 + 2 + unfeasible_routes_length){
-                    int prefix = buff[read_length];
-                    if(prefix <= 8){
-                        log(log_level::DEBUG, "Unfeasible %d.0.0.0/%d", buff[read_length + 1], prefix);
+                    int prefix_len = buff[read_length];
+                    if(prefix_len <= 8){
+                        log(log_level::DEBUG, "Unfeasible %d.0.0.0/%d", buff[read_length + 1], prefix_len);
                         read_length += 2;
-                    }else if(prefix <= 16){
+                    }else if(prefix_len <= 16){
                         log(log_level::DEBUG, "Unfeasible %d.%d.0.0/%d", buff[read_length + 1], buff[read_length + 2],
-                            prefix);
+                            prefix_len);
                         read_length += 3;
-                    }else if(prefix <= 24){
+                    }else if(prefix_len <= 24){
                         log(log_level::DEBUG, "Unfeasible %d.%d.%d.0/%d", buff[read_length + 1], buff[read_length + 2],
-                            buff[read_length + 3], prefix);
+                            buff[read_length + 3], prefix_len);
                         read_length += 4;
-                    }else if(prefix <= 32){
+                    }else if(prefix_len <= 32){
                         log(log_level::DEBUG, "Unfeasible %d.%d.%d.%d/%d", buff[read_length + 1], buff[read_length + 2],
-                            buff[read_length + 3], buff[read_length + 4], prefix);
+                            buff[read_length + 3], buff[read_length + 4], prefix_len);
                         read_length += 5;
                     }else{
                         log(log_level::ERROR, "Invalid packet");
@@ -171,7 +178,7 @@ bool loop_established(bgp_client_peer* peer){
                     }
                 }
             }
-
+            uint32_t nexthop;
             uint16_t total_path_attribute_length;
             memcpy(&total_path_attribute_length, &buff[19 + 2 + unfeasible_routes_length], 2);
             total_path_attribute_length = ntohs(total_path_attribute_length);
@@ -213,8 +220,11 @@ bool loop_established(bgp_client_peer* peer){
                         if(attribute_len == 4){
                             log(log_level::INFO, "Next Hop %d.%d.%d.%d", buff[read_length], buff[read_length + 1],
                                 buff[read_length + 2], buff[read_length + 3]);
+                            nexthop = buff[read_length + 1] + buff[read_length + 2]*256 + buff[read_length + 3]*256*256 + buff[read_length + 4]*256*256*256;
+
                         }else{
-                            hex_dump(&buff[read_length], attribute_len);
+                            //log(log_level::ERROR, "ERR");
+                            //    hex_dump(&buff[read_length], attribute_len);
                         }
                     }
                         break;
@@ -243,36 +253,43 @@ bool loop_established(bgp_client_peer* peer){
             read_length = 19 + 2 + unfeasible_routes_length + 2 + total_path_attribute_length;
 
             while(read_length < entire_length){
-                int prefix = buff[read_length];
-                log(log_level::DEBUG, "Prefix: %d", prefix);
-                if(prefix <= 8){
-                    log(log_level::DEBUG, "%d.0.0.0/%d", buff[read_length + 1], prefix);
+                uint32_t prefix;
+                int prefix_len = buff[read_length];
+                log(log_level::DEBUG, "PrefixLen: %d", prefix_len);
+                if(prefix_len <= 8){
+                    prefix = buff[read_length + 1];
+                    log(log_level::DEBUG, "%d.0.0.0/%d", buff[read_length + 1], prefix_len);
                     read_length += 2;
-                }else if(prefix <= 16){
-                    log(log_level::DEBUG, "%d.%d.0.0/%d", buff[read_length + 1], buff[read_length + 2], prefix);
+                }else if(prefix_len <= 16){
+                    prefix = buff[read_length + 1] + buff[read_length + 2]*256;
+                    log(log_level::DEBUG, "%d.%d.0.0/%d", buff[read_length + 1], buff[read_length + 2], prefix_len);
                     read_length += 3;
-                }else if(prefix <= 24){
+                }else if(prefix_len <= 24){
+                    prefix = buff[read_length + 1] + buff[read_length + 2]*256 + buff[read_length + 3]*256*256;
                     log(log_level::DEBUG, "%d.%d.%d.0/%d", buff[read_length + 1], buff[read_length + 2],
-                        buff[read_length + 3], prefix);
+                        buff[read_length + 3], prefix_len);
                     read_length += 4;
-                }else if(prefix <= 32){
+                }else if(prefix_len <= 32){
+                    prefix = buff[read_length + 1] + buff[read_length + 2]*256 + buff[read_length + 3]*256*256 + buff[read_length + 4]*256*256*256;
                     log(log_level::DEBUG, "%d.%d.%d.%d/%d", buff[read_length + 1], buff[read_length + 2],
-                        buff[read_length + 3], buff[read_length + 4], prefix);
+                        buff[read_length + 3], buff[read_length + 4], prefix_len);
                     read_length += 5;
                 }else{
                     log(log_level::ERROR, "Invalid packet");
                     break;
                 }
+                add_prefix(peer->rib, prefix, prefix_len, nexthop);
+                log(log_level::DEBUG, "Prefix:%d, Nexthop:%d", prefix, nexthop);
             }
-
         }
             break;
         case NOTIFICATION:{
             printf("\e[34m");
-            log(log_level::INFO, "Notification received");
+            log(log_level::NOTICE, "Notification received");
             auto* bgpntp = reinterpret_cast<bgp_notification*>(buff);
-            log(log_level::INFO, "Error: %d", bgpntp->error);
-            log(log_level::INFO, "Sub: %d", ntohs(bgpntp->error_sub));
+            log(log_level::NOTICE, "Error: %d", bgpntp->error);
+            log(log_level::NOTICE, "Sub: %d", bgpntp->error_sub);
+            break;
         }
         case KEEPALIVE:
             printf("\e[35m");
