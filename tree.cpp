@@ -1,5 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "tree.h"
 

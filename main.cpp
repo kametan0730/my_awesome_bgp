@@ -85,6 +85,9 @@ int main(){
         peer.state = IDLE;
         node* root = (node*) malloc(sizeof(node));
         root->is_prefix = true;
+        root->prefix = 0;
+        root->prefix_len = 0;
+        root->next_hop = 0;
         root->parent = nullptr;
         root->node_0 = nullptr;
         root->node_1 = nullptr;

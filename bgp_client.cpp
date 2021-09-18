@@ -220,7 +220,7 @@ bool loop_established(bgp_client_peer* peer){
                         if(attribute_len == 4){
                             log(log_level::INFO, "Next Hop %d.%d.%d.%d", buff[read_length], buff[read_length + 1],
                                 buff[read_length + 2], buff[read_length + 3]);
-                            nexthop = buff[read_length + 1] + buff[read_length + 2]*256 + buff[read_length + 3]*256*256 + buff[read_length + 4]*256*256*256;
+                            nexthop = buff[read_length] + buff[read_length + 1]*256 + buff[read_length + 2]*256*256 + buff[read_length + 3]*256*256*256;
 
                         }else{
                             //log(log_level::ERROR, "ERR");
