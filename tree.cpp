@@ -1,13 +1,26 @@
 #include <cstdio>
 #include <cstdlib>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 
 #include "tree.h"
 
+bool check_bit(uint32_t addr, uint8_t n){
+    return (addr >> (31 - n)) & 0b01;
+}
+
 void print_address_binary(uint32_t addr){
     for(int i = 0; i < 32; ++i){
-        if(N_BIT(addr, i)){
+        if(check_bit(addr, i)){
+            printf("1");
+        }else{
+            printf("0");
+        }
+    }
+    printf("\n");
+}
+
+void print_address_binary_2(uint32_t addr){
+    for(int i = 31; i >= 0; --i){
+        if(check_bit(addr, i)){
             printf("1");
         }else{
             printf("0");
@@ -56,7 +69,6 @@ void delete_prefix(node* prefix, bool is_delete_child_prefix){
     }
     node* current = prefix;
     while(!current->is_prefix and current->parent != nullptr and (current->parent->node_0 == nullptr or current->parent->node_1 == nullptr)){
-        //printf("Release: %d\n", current->prefix_len);
         tmp = current->parent;
         if(current->parent->node_1 == current){
             current->parent->node_1 = nullptr;
@@ -77,7 +89,7 @@ node* search_prefix(node* root, uint32_t address, uint8_t max){
         if(current->is_prefix){
             match_node = current;
         }
-        next = (N_BIT(address, i) ? current->node_1 : current->node_0);
+        next = (check_bit(address, i) ? current->node_1 : current->node_0);
         if(next == nullptr){
             return match_node;
         }
@@ -93,8 +105,7 @@ node* add_prefix(node* root, uint32_t prefix, uint8_t prefix_len, uint32_t next_
     res_prefix_len++;
     node** growth_address_ptr;
     while(res_prefix_len < prefix_len){ // 枝を伸ばす
-        //printf("Create: %d\n", res_prefix_len);
-        if(N_BIT(prefix, res_prefix_len-1)){
+        if(check_bit(prefix, res_prefix_len-1)){
             growth_address_ptr = &current->node_1;
         }else{
             growth_address_ptr = &current->node_0;
@@ -110,7 +121,7 @@ node* add_prefix(node* root, uint32_t prefix, uint8_t prefix_len, uint32_t next_
             growth_node->parent = current;
             growth_node->node_0 = nullptr;
             growth_node->node_1 = nullptr;
-            if(N_BIT(prefix, res_prefix_len - 1)){
+            if(check_bit(prefix, res_prefix_len - 1)){
                 growth_node->prefix |= (0x01 << (res_prefix_len));
                 current->node_1 = growth_node;
             }else{
@@ -121,7 +132,7 @@ node* add_prefix(node* root, uint32_t prefix, uint8_t prefix_len, uint32_t next_
         res_prefix_len++;
     }
 
-    if(N_BIT(prefix, prefix_len - 1)){
+    if(check_bit(prefix, prefix_len - 1)){
         growth_address_ptr = &current->node_1;
     }else{
         growth_address_ptr = &current->node_0;

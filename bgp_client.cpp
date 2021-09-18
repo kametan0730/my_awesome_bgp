@@ -220,7 +220,7 @@ bool loop_established(bgp_client_peer* peer){
                         if(attribute_len == 4){
                             log(log_level::INFO, "Next Hop %d.%d.%d.%d", buff[read_length], buff[read_length + 1],
                                 buff[read_length + 2], buff[read_length + 3]);
-                            nexthop = buff[read_length] + buff[read_length + 1]*256 + buff[read_length + 2]*256*256 + buff[read_length + 3]*256*256*256;
+                            nexthop = buff[read_length]*256*256*256 + buff[read_length + 1]*256*256 + buff[read_length + 2]*256 + buff[read_length + 3];
 
                         }else{
                             //log(log_level::ERROR, "ERR");
@@ -257,20 +257,20 @@ bool loop_established(bgp_client_peer* peer){
                 int prefix_len = buff[read_length];
                 log(log_level::DEBUG, "PrefixLen: %d", prefix_len);
                 if(prefix_len <= 8){
-                    prefix = buff[read_length + 1];
+                    prefix = buff[read_length + 1]*256*256*256;
                     log(log_level::DEBUG, "%d.0.0.0/%d", buff[read_length + 1], prefix_len);
                     read_length += 2;
                 }else if(prefix_len <= 16){
-                    prefix = buff[read_length + 1] + buff[read_length + 2]*256;
+                    prefix = buff[read_length + 1]*256*256*256 + buff[read_length + 2]*256*256;
                     log(log_level::DEBUG, "%d.%d.0.0/%d", buff[read_length + 1], buff[read_length + 2], prefix_len);
                     read_length += 3;
                 }else if(prefix_len <= 24){
-                    prefix = buff[read_length + 1] + buff[read_length + 2]*256 + buff[read_length + 3]*256*256;
+                    prefix = buff[read_length + 1]*256*256*256 + buff[read_length + 2]*256*256 + buff[read_length + 3]*256;
                     log(log_level::DEBUG, "%d.%d.%d.0/%d", buff[read_length + 1], buff[read_length + 2],
                         buff[read_length + 3], prefix_len);
                     read_length += 4;
                 }else if(prefix_len <= 32){
-                    prefix = buff[read_length + 1] + buff[read_length + 2]*256 + buff[read_length + 3]*256*256 + buff[read_length + 4]*256*256*256;
+                    prefix = buff[read_length + 1]*256*256*256 + buff[read_length + 2]*256*256 + buff[read_length + 3]*256 + buff[read_length + 4];
                     log(log_level::DEBUG, "%d.%d.%d.%d/%d", buff[read_length + 1], buff[read_length + 2],
                         buff[read_length + 3], buff[read_length + 4], prefix_len);
                     read_length += 5;

@@ -2,8 +2,7 @@
 #define TEST_RIB_TREE_TREE_H
 
 #include <cstdint>
-
-#define N_BIT(A, N) ((A >> (N)) & 0b01)
+#include <netinet/in.h>
 
 /*
 struct entry{
@@ -22,7 +21,9 @@ struct node{
     node* node_1;
 };
 
+bool check_bit(uint32_t addr, uint8_t n);
 void print_address_binary(uint32_t addr);
+void print_address_binary_2(uint32_t addr);
 void assert_tree(node* node);
 
 // entry* add_entry_to_prefix();
