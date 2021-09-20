@@ -35,7 +35,6 @@ bool send_notification(bgp_client_peer* peer, int8_t error, uint16_t error_sub){
     return true;
 }
 
-
 bool send_open(bgp_client_peer* peer){
     bgp_open open;
     memset(open.header.maker, 0xff, 16);
@@ -74,6 +73,16 @@ bool try_to_connect(bgp_client_peer* peer){
 
     //send_open(peer);
     return true;
+}
+
+void close_peer(bgp_client_peer* peer){
+    if(peer->rib != nullptr){
+        log(log_level::DEBUG, "Cleaned table sock %d", peer->sock);
+        delete_prefix(peer->rib, true);
+        peer->rib = nullptr;
+    }
+    log(log_level::DEBUG, "Closed connection socket %d", peer->sock);
+    close(peer->sock);
 }
 
 bool loop_established(bgp_client_peer* peer){
@@ -345,11 +354,7 @@ bool bgp_client_loop(bgp_client_peer* peer){
         case ESTABLISHED:
             if(!loop_established(peer)){
                 peer->state = IDLE;
-                if(peer->rib != nullptr){
-                    log(log_level::DEBUG, "Cleaned table sock %d", peer->sock);
-                    delete_prefix(peer->rib, true);
-                    peer->rib = nullptr;
-                }
+                close_peer(peer);
             }
             break;
     }

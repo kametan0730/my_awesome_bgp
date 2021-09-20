@@ -94,7 +94,6 @@ int main(){
         char input = getchar();
         if(console_mode == 0){
             if(input == 'q'){
-
                 log(log_level::INFO, "Good bye");
                 break;
             }else if(input == 'b'){
@@ -146,13 +145,8 @@ int main(){
         }
     }
 
-    for(int i = 0; i < peers.size(); ++i){
-        if(peers[i].rib != nullptr){
-            log(log_level::TRACE, "Cleaning table peer %d", i);
-            delete_prefix(peers[i].rib, true);
-            peers[i].rib = nullptr;
-            log(log_level::DEBUG, "Cleaned table peer %d", i);
-        }
+    for(auto & peer : peers){
+        close_peer(&peer);
     }
     return EXIT_SUCCESS;
 }

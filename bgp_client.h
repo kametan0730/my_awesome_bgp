@@ -17,11 +17,11 @@ extern uint8_t console_mode;
 
 struct bgp_client_peer{
     int sock;
-    int state;
+    uint8_t state;
     node* rib;
     struct sockaddr_in server_address;
-    short remote_as;
-    int connect_cool_time;
+    uint32_t remote_as;
+    uint32_t connect_cool_time;
     //bool is_shutdown;
 };
 
@@ -123,6 +123,7 @@ struct bgp_notification{
 } __attribute__((packed));
 
 bool send_open(bgp_client_peer* peer);
+void close_peer(bgp_client_peer* peer);
 bool bgp_client_loop(bgp_client_peer* peer);
 
 #endif //MY_AWESOME_BGP_BGP_CLIENT_H
