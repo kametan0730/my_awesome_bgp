@@ -82,6 +82,13 @@ int main(){
             exit(EXIT_FAILURE);
         }
         peer.state = IDLE;
+
+        node* root = (node*) malloc(sizeof(node));
+        if(root == nullptr){
+            log(log_level::ERROR, "Failed to allocate memory for rib root");
+            exit(EXIT_FAILURE);
+        }
+        peer.rib = root;
         peer.connect_cool_time = 0;
         //peer.is_shutdown = false;
         peers.push_back(peer);
@@ -120,7 +127,7 @@ int main(){
                         now = std::chrono::system_clock::now();
                         console("Uptime %d seconds", std::chrono::duration_cast<std::chrono::seconds>(now-up).count());
                     }else if(strcmp(command, "shutdown") == 0){
-                        console("Good bye\n");
+                        console("Good bye");
                         break;
                     }else{
                         execute_command(command);
@@ -140,13 +147,18 @@ int main(){
 
         now = std::chrono::system_clock::now();
         real_time = std::chrono::duration_cast<std::chrono::microseconds>(now-start).count();
-        if(1000 > real_time){ // もしこのループにかかった時間が0.001秒未満なら
-            usleep(1000 - real_time); //　0.001秒に満たない時間分ループが終わるのを待つ
+        if(100 > real_time){ // もしこのループにかかった時間が0.0001秒未満なら
+            usleep(100 - real_time); //　0.0001秒に満たない時間分ループが終わるのを待つ
         }
     }
 
     for(auto & peer : peers){
         close_peer(&peer);
+    }
+    log(log_level::INFO, "Closed all peers");
+
+    for(auto & peer : peers){
+        free(peer.rib); // root自体はまだ解放されていないのでここで
     }
     return EXIT_SUCCESS;
 }

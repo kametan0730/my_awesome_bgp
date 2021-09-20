@@ -1,3 +1,4 @@
+#include <cassert>
 #include <fcntl.h>
 #include <unistd.h>
 #include <fstream>
@@ -81,7 +82,6 @@ void close_peer(bgp_client_peer* peer){
         delete_prefix(peer->rib, true);
         peer->rib = nullptr;
     }
-    log(log_level::DEBUG, "Closed connection socket %d", peer->sock);
     close(peer->sock);
 }
 
@@ -191,6 +191,7 @@ bool loop_established(bgp_client_peer* peer){
                     if(unfeasible_prefix_node->prefix_len == prefix_len){
                         delete_prefix(unfeasible_prefix_node);
                         log(log_level::DEBUG, "Withdraw success!");
+                        peer->route_count--;
                     }else{
                         log(log_level::ERROR, "Failed to withdraw %s/%d", inet_ntoa(in_addr{.s_addr = htonl(unfeasible_prefix)}), prefix_len);
                     }
@@ -235,15 +236,10 @@ bool loop_established(bgp_client_peer* peer){
                     }
                         break;
                     case NEXT_HOP:{
-                        if(attribute_len == 4){
-                            log(log_level::INFO, "Next Hop %d.%d.%d.%d", buff[read_length], buff[read_length + 1],
-                                buff[read_length + 2], buff[read_length + 3]);
-                            next_hop = buff[read_length]*256*256*256 + buff[read_length + 1]*256*256 + buff[read_length + 2]*256 + buff[read_length + 3];
-
-                        }else{
-                            //log(log_level::ERROR, "ERR");
-                            //    hex_dump(&buff[read_length], attribute_len);
-                        }
+                        assert(attribute_len == 4);
+                        log(log_level::INFO, "Next Hop %d.%d.%d.%d", buff[read_length], buff[read_length + 1],
+                            buff[read_length + 2], buff[read_length + 3]);
+                        next_hop = buff[read_length]*256*256*256 + buff[read_length + 1]*256*256 + buff[read_length + 2]*256 + buff[read_length + 3];
                     }
                         break;
                     case MULTI_EXIT_DISC:
@@ -297,6 +293,7 @@ bool loop_established(bgp_client_peer* peer){
                     break;
                 }
                 add_prefix(peer->rib, prefix, prefix_len, next_hop);
+                peer->route_count++;
             }
         }
             break;
@@ -309,15 +306,13 @@ bool loop_established(bgp_client_peer* peer){
         }
         case KEEPALIVE:
             if(peer->state == OPEN_CONFIRM){
-                node* root = (node*) malloc(sizeof(node));
-                root->is_prefix = true;
-                root->prefix = 0;
-                root->prefix_len = 0;
-                root->next_hop = 0;
-                root->parent = nullptr;
-                root->node_0 = nullptr;
-                root->node_1 = nullptr;
-                peer->rib = root;
+                peer->rib->is_prefix = true;
+                peer->rib->prefix = 0;
+                peer->rib->prefix_len = 0;
+                peer->rib->next_hop = 0;
+                peer->rib->parent = nullptr;
+                peer->rib->node_0 = nullptr;
+                peer->rib->node_1 = nullptr;
                 peer->state = ESTABLISHED;
             }
             log(log_level::INFO, "Keepalive Received");
@@ -344,8 +339,11 @@ bool bgp_client_loop(bgp_client_peer* peer){
             if(peer->connect_cool_time == 0){
                 if(try_to_connect(peer)){
                     peer->state = OPEN_CONFIRM;
+                }else{
+                    close(peer->sock);
+                    peer->connect_cool_time = 100000;
                 }
-                peer->connect_cool_time = 2000;
+                peer->connect_cool_time = 10000;
             }else{
                 peer->connect_cool_time--;
             }

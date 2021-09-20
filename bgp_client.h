@@ -22,6 +22,7 @@ struct bgp_client_peer{
     struct sockaddr_in server_address;
     uint32_t remote_as;
     uint32_t connect_cool_time;
+    uint32_t route_count;
     //bool is_shutdown;
 };
 
