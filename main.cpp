@@ -39,7 +39,6 @@ int main(){
     act.sa_handler = signal_handler;
     sigemptyset(&act.sa_mask);
     act.sa_flags = 0;
-
     act.sa_flags |= SA_INTERRUPT;
 
     if(sigaction(SIGALRM, &act, &old_act) < 0){
@@ -83,26 +82,19 @@ int main(){
             exit(EXIT_FAILURE);
         }
         peer.state = IDLE;
-        node* root = (node*) malloc(sizeof(node));
-        root->is_prefix = true;
-        root->prefix = 0;
-        root->prefix_len = 0;
-        root->next_hop = 0;
-        root->parent = nullptr;
-        root->node_0 = nullptr;
-        root->node_1 = nullptr;
-        peer.rib = root;
         peer.connect_cool_time = 0;
+        //peer.is_shutdown = false;
         peers.push_back(peer);
     }
 
-    std::chrono::system_clock::time_point start, end;
+    std::chrono::system_clock::time_point start, now;
     uint64_t real_time;
     while(true){
         start = std::chrono::system_clock::now();
         char input = getchar();
         if(console_mode == 0){
             if(input == 'q'){
+
                 log(log_level::INFO, "Good bye");
                 break;
             }else if(input == 'b'){
@@ -119,11 +111,18 @@ int main(){
                     command[offset] = input;
                     command[++offset] = '\0';
                 }else if(input == 0x0a){
-                    if(strcmp(command, "exit") == 0){
+                    if(command[0] == '\0'){
+                    }else if(strcmp(command, "exit") == 0){
                         console_mode = 0;
                         printf("Switched into log mode\n");
                     }else if(strcmp(command, "break") == 0){
                         raise(SIGINT);
+                    }else if(strcmp(command, "uptime") == 0){
+                        now = std::chrono::system_clock::now();
+                        console("Uptime %d seconds", std::chrono::duration_cast<std::chrono::seconds>(now-up).count());
+                    }else if(strcmp(command, "shutdown") == 0){
+                        console("Good bye\n");
+                        break;
                     }else{
                         execute_command(command);
                     }
@@ -140,10 +139,19 @@ int main(){
         }
         log_id = 0;
 
-        end = std::chrono::system_clock::now();
-        real_time = std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
+        now = std::chrono::system_clock::now();
+        real_time = std::chrono::duration_cast<std::chrono::microseconds>(now-start).count();
         if(1000 > real_time){ // もしこのループにかかった時間が0.001秒未満なら
             usleep(1000 - real_time); //　0.001秒に満たない時間分ループが終わるのを待つ
+        }
+    }
+
+    for(int i = 0; i < peers.size(); ++i){
+        if(peers[i].rib != nullptr){
+            log(log_level::TRACE, "Cleaning table peer %d", i);
+            delete_prefix(peers[i].rib, true);
+            peers[i].rib = nullptr;
+            log(log_level::DEBUG, "Cleaned table peer %d", i);
         }
     }
     return EXIT_SUCCESS;

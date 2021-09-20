@@ -87,7 +87,7 @@ bool loop_established(bgp_client_peer* peer){
     }
     auto* bgphp = reinterpret_cast<bgp_header*>(buff);
 
-    hex_dump(buff, 29); // dump header
+    // hex_dump(buff, 29); // dump header
     int entire_length = ntohs(bgphp->length);
     log(log_level::TRACE, "Receiving %d bytes", entire_length);
 
@@ -300,6 +300,15 @@ bool loop_established(bgp_client_peer* peer){
         }
         case KEEPALIVE:
             if(peer->state == OPEN_CONFIRM){
+                node* root = (node*) malloc(sizeof(node));
+                root->is_prefix = true;
+                root->prefix = 0;
+                root->prefix_len = 0;
+                root->next_hop = 0;
+                root->parent = nullptr;
+                root->node_0 = nullptr;
+                root->node_1 = nullptr;
+                peer->rib = root;
                 peer->state = ESTABLISHED;
             }
             log(log_level::INFO, "Keepalive Received");
@@ -336,6 +345,11 @@ bool bgp_client_loop(bgp_client_peer* peer){
         case ESTABLISHED:
             if(!loop_established(peer)){
                 peer->state = IDLE;
+                if(peer->rib != nullptr){
+                    log(log_level::DEBUG, "Cleaned table sock %d", peer->sock);
+                    delete_prefix(peer->rib, true);
+                    peer->rib = nullptr;
+                }
             }
             break;
     }

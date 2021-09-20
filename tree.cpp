@@ -66,8 +66,12 @@ void delete_prefix(node* prefix, bool is_delete_child_prefix){
     }
     node* tmp;
     if(is_delete_child_prefix and prefix->node_1 != nullptr and prefix->node_0 != nullptr){
-        tmp = prefix->node_1;
+        /*
+        tmp = prefix->node_1; tmpをnode_1にするとなぜか全経路削除の時に free(): double free detected in tcache 2 でAbortedする
         prefix->node_1 = nullptr;
+        */
+        tmp = prefix->node_0;
+        prefix->node_0 = nullptr;
         delete_prefix(prefix, true);
         return delete_prefix(tmp, true);
     }
@@ -142,6 +146,10 @@ node* add_prefix(node* root, uint32_t prefix, uint8_t prefix_len, uint32_t next_
             current = *growth_address_ptr;
         }else{
             node* growth_node = (node*) malloc(sizeof(node));
+            if(growth_node == nullptr){
+                printf("Failed to allocate memory\n");
+                exit(EXIT_FAILURE);
+            }
             growth_node->is_prefix = false;
             growth_node->prefix = current->prefix;
             growth_node->prefix_len = current_prefix_len+1;
@@ -170,7 +178,10 @@ node* add_prefix(node* root, uint32_t prefix, uint8_t prefix_len, uint32_t next_
     }
     if((*growth_address_ptr) == nullptr){
         node* new_prefix = (node*) malloc(sizeof(node));
-
+        if(new_prefix == nullptr){
+            printf("Failed to allocate memory\n");
+            exit(EXIT_FAILURE);
+        }
         new_prefix->is_prefix = true;
         new_prefix->prefix = current->prefix;
         if(check_bit(prefix, prefix_len-1)){
