@@ -1,7 +1,10 @@
 #include <cstdio>
 #include <cstdlib>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "tree.h"
+
 
 bool check_bit(uint32_t addr, uint8_t n){
     return (addr >> (31 - n)) & 0b01;
@@ -33,16 +36,12 @@ void assert_tree(node* node){
     if(node->node_0 != nullptr){
         if(node->node_0->prefix_len != node->prefix_len + 1){
             printf("Invalid prefix length %d and %d\n", node->node_0->prefix_len, node->prefix_len);
-        }else{
-            printf("Assert OK\n");
         }
         assert_tree(node->node_0);
     }
     if(node->node_1 != nullptr){
         if(node->node_1->prefix_len != node->prefix_len + 1){
             printf("Invalid prefix length %d and %d\n", node->node_1->prefix_len, node->prefix_len);
-        }else{
-            printf("Assert OK\n");
         }
         assert_tree(node->node_1);
     }
@@ -74,6 +73,9 @@ void delete_prefix(node* prefix, bool is_delete_child_prefix){
     }
     node* current = prefix;
     while(!current->is_prefix and current->parent != nullptr and (current->parent->node_0 == nullptr or current->parent->node_1 == nullptr)){
+#ifdef TEST_RIB_TREE_TEST_TREE
+        printf("Release: %s/%d, %p\n", inet_ntoa(in_addr{.s_addr = htonl(current->prefix)}), current->prefix_len, current);
+#endif
         tmp = current->parent;
         if(current->parent->node_1 == current){
             current->parent->node_1 = nullptr;
@@ -125,11 +127,13 @@ node* search_prefix(node* root, uint32_t address, uint8_t max_prefix_len, bool i
  */
 node* add_prefix(node* root, uint32_t prefix, uint8_t prefix_len, uint32_t next_hop){
     node* current = search_prefix(root, prefix, prefix_len-1);
-    uint8_t res_prefix_len = current->prefix_len;
-    res_prefix_len++;
+    uint8_t current_prefix_len = current->prefix_len;
+#ifdef TEST_RIB_TREE_TEST_TREE
+    printf("Get prefix: %d\n", current_prefix_len);
+#endif
     node** growth_address_ptr;
-    while(res_prefix_len < prefix_len){ // 枝を伸ばす
-        if(check_bit(prefix, res_prefix_len-1)){
+    while(current_prefix_len < prefix_len - 1){ // 枝を伸ばす
+        if(check_bit(prefix, current_prefix_len)){
             growth_address_ptr = &current->node_1;
         }else{
             growth_address_ptr = &current->node_0;
@@ -140,20 +144,23 @@ node* add_prefix(node* root, uint32_t prefix, uint8_t prefix_len, uint32_t next_
             node* growth_node = (node*) malloc(sizeof(node));
             growth_node->is_prefix = false;
             growth_node->prefix = current->prefix;
-            growth_node->prefix_len = res_prefix_len;
+            growth_node->prefix_len = current_prefix_len+1;
             growth_node->next_hop = 0;
             growth_node->parent = current;
             growth_node->node_0 = nullptr;
             growth_node->node_1 = nullptr;
-            if(check_bit(prefix, res_prefix_len - 1)){
-                growth_node->prefix |= (0x01 << (res_prefix_len));
+            if(check_bit(prefix, current_prefix_len)){
+                growth_node->prefix |= (0b01 << (32 - (current_prefix_len + 1)));
                 current->node_1 = growth_node;
             }else{
                 current->node_0 = growth_node;
             }
+#ifdef TEST_RIB_TREE_TEST_TREE
+            printf("Create: %s/%d, %p\n", inet_ntoa(in_addr{.s_addr = htonl(growth_node->prefix)}), current_prefix_len+1, growth_node);
+#endif
             current = growth_node;
         }
-        res_prefix_len++;
+        current_prefix_len++;
     }
 
     if(check_bit(prefix, prefix_len - 1)){
@@ -163,8 +170,15 @@ node* add_prefix(node* root, uint32_t prefix, uint8_t prefix_len, uint32_t next_
     }
     if((*growth_address_ptr) == nullptr){
         node* new_prefix = (node*) malloc(sizeof(node));
+
         new_prefix->is_prefix = true;
-        new_prefix->prefix = prefix;
+        new_prefix->prefix = current->prefix;
+        if(check_bit(prefix, prefix_len-1)){
+            new_prefix->prefix |= (0b01 << (32 - prefix_len));
+        }
+#ifdef TEST_RIB_TREE_TEST_TREE
+        printf("CreateP: %s/%d, %p\n", inet_ntoa(in_addr{.s_addr = htonl(new_prefix->prefix)}), prefix_len, new_prefix);
+#endif
         new_prefix->prefix_len = prefix_len;
         new_prefix->next_hop = next_hop;
         new_prefix->parent = current;
@@ -172,6 +186,9 @@ node* add_prefix(node* root, uint32_t prefix, uint8_t prefix_len, uint32_t next_
         new_prefix->node_1 = nullptr;
         *growth_address_ptr = new_prefix;
     }else{
+#ifdef TEST_RIB_TREE_TEST_TREE
+        printf("Exist: %s/%d, %p\n", inet_ntoa(in_addr{.s_addr = htonl(prefix)}), prefix_len, (*growth_address_ptr));
+#endif
         (*growth_address_ptr)->is_prefix = true;
         (*growth_address_ptr)->next_hop = next_hop;
     }
