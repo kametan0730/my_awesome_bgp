@@ -60,12 +60,12 @@ bool try_to_connect(bgp_client_peer* peer){
         return false;
     }
     if(connect_with_timeout(peer->sock, (struct sockaddr*) &peer->server_address, sizeof(peer->server_address), 1000) < 0){
-
         if(errno == EINTR){
             log(log_level::ERROR, "Timeout to connect server");
         }else{
             log(log_level::ERROR, "Failed to connect server");
         }
+        close(peer->sock);
         return false;
     }
 
@@ -105,6 +105,9 @@ bool loop_established(bgp_client_peer* peer){
         remain_byte = entire_length - len;
         log(log_level::TRACE, "%d bytes remain", remain_byte);
         append_len = recv(peer->sock, &buff[len], std::min(remain_byte, 1000), 0);
+        if(append_len <= 0){
+            continue;
+        }
         log(log_level::TRACE, "New %d bytes received", append_len);
         len += append_len;
     }
@@ -166,27 +169,21 @@ bool loop_established(bgp_client_peer* peer){
                     int prefix_len = buff[read_length];
                     if(prefix_len <= 8){
                         unfeasible_prefix = buff[read_length + 1]*256*256*256;
-                        log(log_level::DEBUG, "Unfeasible %d.0.0.0/%d", buff[read_length + 1], prefix_len);
                         read_length += 2;
                     }else if(prefix_len <= 16){
                         unfeasible_prefix = buff[read_length + 1]*256*256*256 + buff[read_length + 2]*256*256;
-                        log(log_level::DEBUG, "Unfeasible %d.%d.0.0/%d", buff[read_length + 1], buff[read_length + 2],
-                            prefix_len);
                         read_length += 3;
                     }else if(prefix_len <= 24){
                         unfeasible_prefix = buff[read_length + 1]*256*256*256 + buff[read_length + 2]*256*256 + buff[read_length + 3]*256;
-                        log(log_level::DEBUG, "Unfeasible %d.%d.%d.0/%d", buff[read_length + 1], buff[read_length + 2],
-                            buff[read_length + 3], prefix_len);
                         read_length += 4;
                     }else if(prefix_len <= 32){
                         unfeasible_prefix = buff[read_length + 1]*256*256*256 + buff[read_length + 2]*256*256 + buff[read_length + 3]*256 + buff[read_length + 4];
-                        log(log_level::DEBUG, "Unfeasible %d.%d.%d.%d/%d", buff[read_length + 1], buff[read_length + 2],
-                            buff[read_length + 3], buff[read_length + 4], prefix_len);
                         read_length += 5;
                     }else{
                         log(log_level::ERROR, "Invalid packet");
                         exit(1);
                     }
+                    log(log_level::DEBUG, "Unfeasible %s/%d", inet_ntoa(in_addr{.s_addr=ntohl(unfeasible_prefix)}), prefix_len);
                     node* unfeasible_prefix_node = search_prefix(peer->rib, unfeasible_prefix, prefix_len);
                     if(unfeasible_prefix_node->prefix_len == prefix_len){
                         delete_prefix(unfeasible_prefix_node);
@@ -230,16 +227,15 @@ bool loop_established(bgp_client_peer* peer){
                             uint16_t asn;
                             memcpy(&asn, &buff[read_length + 2 + i * 2], 2);
                             asn = ntohs(asn);
-                            //log(log_level::INFO, "AS Path %d", asn);
+                            log(log_level::INFO, "AS Path %d", asn);
                         }
                         //hex_dump(&buff[read_length], attribute_len);
                     }
                         break;
                     case NEXT_HOP:{
                         assert(attribute_len == 4);
-                        log(log_level::INFO, "Next Hop %d.%d.%d.%d", buff[read_length], buff[read_length + 1],
-                            buff[read_length + 2], buff[read_length + 3]);
                         next_hop = buff[read_length]*256*256*256 + buff[read_length + 1]*256*256 + buff[read_length + 2]*256 + buff[read_length + 3];
+                        log(log_level::INFO, "Next Hop %s", inet_ntoa(in_addr{.s_addr = ntohl(next_hop)}));
                     }
                         break;
                     case MULTI_EXIT_DISC:
@@ -269,31 +265,25 @@ bool loop_established(bgp_client_peer* peer){
             while(read_length < entire_length){
                 uint32_t prefix;
                 int prefix_len = buff[read_length];
-                log(log_level::DEBUG, "PrefixLen: %d", prefix_len);
                 if(prefix_len <= 8){
                     prefix = buff[read_length + 1]*256*256*256;
-                    log(log_level::DEBUG, "%d.0.0.0/%d", buff[read_length + 1], prefix_len);
                     read_length += 2;
                 }else if(prefix_len <= 16){
                     prefix = buff[read_length + 1]*256*256*256 + buff[read_length + 2]*256*256;
-                    log(log_level::DEBUG, "%d.%d.0.0/%d", buff[read_length + 1], buff[read_length + 2], prefix_len);
                     read_length += 3;
                 }else if(prefix_len <= 24){
                     prefix = buff[read_length + 1]*256*256*256 + buff[read_length + 2]*256*256 + buff[read_length + 3]*256;
-                    log(log_level::DEBUG, "%d.%d.%d.0/%d", buff[read_length + 1], buff[read_length + 2],
-                        buff[read_length + 3], prefix_len);
                     read_length += 4;
                 }else if(prefix_len <= 32){
                     prefix = buff[read_length + 1]*256*256*256 + buff[read_length + 2]*256*256 + buff[read_length + 3]*256 + buff[read_length + 4];
-                    log(log_level::DEBUG, "%d.%d.%d.%d/%d", buff[read_length + 1], buff[read_length + 2],
-                        buff[read_length + 3], buff[read_length + 4], prefix_len);
                     read_length += 5;
                 }else{
                     log(log_level::ERROR, "Invalid packet");
                     break;
                 }
+                log(log_level::DEBUG, "%s/%d", inet_ntoa(in_addr{.s_addr=ntohl(prefix)}), prefix_len);
                 add_prefix(peer->rib, prefix, prefix_len, next_hop);
-                peer->route_count++;
+                peer->route_count++; // TODO 経路の追加ではなく、既存の経路の更新かもしれない
             }
         }
             break;
@@ -340,7 +330,6 @@ bool bgp_client_loop(bgp_client_peer* peer){
                 if(try_to_connect(peer)){
                     peer->state = OPEN_CONFIRM;
                 }else{
-                    close(peer->sock);
                     peer->connect_cool_time = 100000;
                 }
                 peer->connect_cool_time = 10000;

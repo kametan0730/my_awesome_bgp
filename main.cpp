@@ -43,7 +43,7 @@ int main(){
 
     if(sigaction(SIGALRM, &act, &old_act) < 0){
         fprintf(stderr, "Error registering signal disposition\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     log_id = 0;
     log(log_level::INFO, "Hello BGP!!");
@@ -78,7 +78,7 @@ int main(){
         peer.server_address.sin_family = AF_INET;
 
         if(inet_aton(neighbor.at("address").get<std::string>().c_str(), &peer.server_address.sin_addr) == 0){
-            log(log_level::ERROR, "Invalid IP address");
+            log(log_level::ERROR, "Invalid IP address in config");
             exit(EXIT_FAILURE);
         }
         peer.state = IDLE;
@@ -107,7 +107,7 @@ int main(){
                 raise(SIGINT);
             }else if(input == 'c'){
                 console_mode = 1;
-                printf("Switched into command mode\n");
+                printf("Switched to command mode\n");
             }
         }else{
             static char command[256];
@@ -120,7 +120,7 @@ int main(){
                     if(command[0] == '\0'){
                     }else if(strcmp(command, "exit") == 0){
                         console_mode = 0;
-                        printf("Switched into log mode\n");
+                        printf("Switched to log mode\n");
                     }else if(strcmp(command, "break") == 0){
                         raise(SIGINT);
                     }else if(strcmp(command, "uptime") == 0){
