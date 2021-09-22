@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <nlohmann/json.hpp>
 
+#include "bgp.h"
 #include "bgp_client.h"
 #include "command.h"
 #include "logger.h"
@@ -72,9 +73,9 @@ int main(){
     for(auto &neighbor: conf_json.at("neighbors")){
         bgp_client_peer peer{
                 .sock = 0,
-                .state = ACTIVE,
                 .remote_as = neighbor.at("remote-as")
         };
+        peer.state = ACTIVE;
         peer.server_address.sin_family = AF_INET;
 
         if(inet_aton(neighbor.at("address").get<std::string>().c_str(), &peer.server_address.sin_addr) == 0){
