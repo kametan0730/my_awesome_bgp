@@ -221,15 +221,29 @@ bool loop_established(bgp_client_peer* peer){
                     case AS_PATH:{
                         uint8_t segment_type = buff[read_length];
                         uint8_t segment_length = buff[read_length + 1];
+
                         //read_length += 2;
                         //hex_dump(&buff[read_length], 40);
-                        for(int i = 0; i < segment_length; i++){
-                            uint16_t asn;
-                            memcpy(&asn, &buff[read_length + 2 + i * 2], 2);
-                            asn = ntohs(asn);
-                            log(log_level::INFO, "AS Path %d", asn);
-                        }
+
                         //hex_dump(&buff[read_length], attribute_len);
+
+                        if(segment_type == bgp_path_attribute_as_path_segment_type::AS_SEQUENCE){
+                            char as_list[256];
+                            memset(as_list, 0, 255);
+                            char as_str[10];
+                            for(int i = 0; i < segment_length; i++){
+                                uint16_t asn;
+                                memcpy(&asn, &buff[read_length + 2 + i * 2], 2);
+                                asn = ntohs(asn);
+                                // log(log_level::DEBUG, "AS Path %d", asn);
+                                memset(as_str, 0, 10);
+                                sprintf(as_str, " %d", asn);
+                                strcat(as_list, as_str);
+                            }
+                            log(log_level::INFO, "AS Path%s", as_list);
+                        }else{
+                            log(log_level::DEBUG, "Unable to interpret segment type %d", segment_type);
+                        }
                     }
                         break;
                     case NEXT_HOP:{
@@ -253,6 +267,32 @@ bool loop_established(bgp_client_peer* peer){
                         break;
                     case ATOMIC_AGGREGATE:
                         log(log_level::INFO, "Atomic Aggregate");
+                        break;
+                    case AS4_PATH:
+                    {
+                        uint8_t segment_type = buff[read_length];
+                        uint8_t segment_length = buff[read_length + 1];
+                        //hex_dump(&buff[read_length], attribute_len);
+                        if(segment_type == bgp_path_attribute_as_path_segment_type::AS_SEQUENCE){
+                            char as_list[256];
+                            memset(as_list, 0, 255);
+                            char as_str[10];
+                            for(int i = 0; i < segment_length; i++){
+                                uint32_t asn;
+                                memcpy(&asn, &buff[read_length + 2 + i * 4], 4);
+                                asn = ntohl(asn);
+                                // log(log_level::DEBUG, "AS Path %d", asn);
+                                memset(as_str, 0, 10);
+                                sprintf(as_str, " %d", asn);
+                                strcat(as_list, as_str);
+                            }
+                            log(log_level::INFO, "AS4 Path%s", as_list);
+                        }else{
+                            log(log_level::DEBUG, "Unable to interpret segment type %d", segment_type);
+                        }
+
+                    }
+
                         break;
                     default:
                         log(log_level::INFO, "Unhandled path attribute type %d", type);

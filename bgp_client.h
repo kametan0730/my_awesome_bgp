@@ -63,6 +63,7 @@ enum bgp_path_attribute_type{
     MP_UNREACH_NLRI = 15,
     EXTENDED = 16,
     AS4_PATH = 17,
+    AS4_AGGREGATOR = 18,
 };
 
 enum bgp_error_code{
