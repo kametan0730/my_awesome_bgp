@@ -1,21 +1,12 @@
 #ifndef TEST_RIB_TREE_TREE_H
 #define TEST_RIB_TREE_TREE_H
 
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cstdint>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-
-struct attribute{
-    uint8_t origin = 0;
-    uint32_t next_hop = 0;
-    uint32_t med = 0;
-    uint32_t local_pref = 0;
-    // attribute* next; // TODO 複数の属性を持たせられるように
-};
 
 template <typename DATA_TYPE>
 struct node{
@@ -122,6 +113,9 @@ node<DATA_TYPE>* search_prefix(node<DATA_TYPE>* root, uint32_t address, uint8_t 
         }
         i++;
         current = next;
+    }
+    if(is_prefix_strict && match_node->prefix_len == 0){
+        return nullptr; // TODO あってるかよく考える
     }
     return match_node;
 }

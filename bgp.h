@@ -1,14 +1,16 @@
 #ifndef MY_AWESOME_BGP_BGP_H
 #define MY_AWESOME_BGP_BGP_H
 
+#include "bgp_rib.h"
 #include "tree.h"
 
-extern node<attribute>* bgp_loc_rib;
+struct adj_ribs_in_data;
 
 class bgp_peer{
 public:
     uint8_t state;
-    node<attribute>* adj_ribs_in;
+    node<adj_ribs_in_data>* adj_ribs_in;
+    uint32_t bgp_id;
     uint32_t route_count;
 };
 

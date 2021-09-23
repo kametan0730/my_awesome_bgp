@@ -13,6 +13,7 @@
 
 #include "bgp.h"
 #include "bgp_client.h"
+#include "bgp_rib.h"
 #include "command.h"
 #include "logger.h"
 #include "tree.h"
@@ -24,7 +25,7 @@ std::vector<bgp_client_peer> peers;
 uint32_t my_as;
 uint8_t log_id;
 uint8_t console_mode = 0;
-node<attribute>* bgp_loc_rib;
+node<loc_rib_data>* bgp_loc_rib;
 
 void signal_handler(int sig){
 }
@@ -67,6 +68,19 @@ int main(){
     my_as = conf_json.at("my_as").get<int>();
     log(log_level::INFO, "My AS: %d", my_as);
 
+    bgp_loc_rib = (node<loc_rib_data>*) malloc(sizeof(node<loc_rib_data>));
+    if(bgp_loc_rib == nullptr){
+        log(log_level::ERROR, "Failed to allocate memory for loc_rib root");
+        exit(EXIT_FAILURE);
+    }
+    bgp_loc_rib->is_prefix = false;
+    bgp_loc_rib->prefix = 0;
+    bgp_loc_rib->prefix_len = 0;
+    bgp_loc_rib->data = nullptr;
+    bgp_loc_rib->parent = nullptr;
+    bgp_loc_rib->node_0 = nullptr;
+    bgp_loc_rib->node_1 = nullptr;
+
     for(auto &neighbor: conf_json.at("neighbors")){
         bgp_client_peer peer{
                 .sock = 0,
@@ -81,9 +95,9 @@ int main(){
         }
         peer.state = IDLE;
 
-        auto* root = (node<attribute>*) malloc(sizeof(node<attribute>));
+        auto* root = (node<adj_ribs_in_data>*) malloc(sizeof(node<adj_ribs_in_data>));
         if(root == nullptr){
-            log(log_level::ERROR, "Failed to allocate memory for rib root");
+            log(log_level::ERROR, "Failed to allocate memory for adj_ribs_in root");
             exit(EXIT_FAILURE);
         }
         root->is_prefix = false;
@@ -113,9 +127,7 @@ int main(){
                         raise(SIGINT);
                     }else if(input == 'c'){
                         console_mode = 1;
-                        for(int i = 0; i < 10000; ++i){
-                            getchar(); // 連続入力の対策はしているが、もしかすると連続する文字列がcから始まるかもしれない. その場合、対策をすり抜けてしまうのでへんなコマンドが実行されないようにここでバッファをクリアする
-                        }
+                        while(getchar() != -1); // 連続入力の対策はしているが、もしかすると連続する文字列がcから始まるかもしれない. その場合、対策をすり抜けてしまうのでへんなコマンドが実行されないようにここでバッファをクリアする
                         printf("Switched to command mode\n");
                     }
                 }
@@ -125,9 +137,11 @@ int main(){
             static char command[256];
             static uint8_t offset = 0;
             if(input != -1){
-                if(input > 0x20 and input < 0x7e){
-                    command[offset] = input;
-                    command[++offset] = '\0';
+                if(input >= 0x20 and input <= 0x7e){
+                    if(offset <= 250){
+                        command[offset] = input;
+                        command[++offset] = '\0';
+                    }
                 }else if(input == 0x0a){
                     if(command[0] == '\0'){
                     }else if(strcmp(command, "exit") == 0){
@@ -142,7 +156,9 @@ int main(){
                         console("Good bye");
                         break;
                     }else{
-                        execute_command(command);
+                        if(!execute_command(command)){
+                            console("Command not found");
+                        }
                     }
                     memset(command, 0, 255);
                     offset = 0;
@@ -172,5 +188,6 @@ int main(){
     for(auto & peer : peers){
         free(peer.adj_ribs_in); // root自体はまだ解放されていないのでここで
     }
+    printf("Safety exited\n");
     return EXIT_SUCCESS;
 }

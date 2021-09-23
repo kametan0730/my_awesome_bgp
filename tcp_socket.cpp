@@ -1,8 +1,7 @@
 #include "tcp_socket.h"
 
-#include <iostream>
-#include <fcntl.h>
 #include <fstream>
+#include <fcntl.h>
 #include <poll.h>
 
 void set_nonblocking(int sockfd){

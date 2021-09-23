@@ -1,6 +1,6 @@
 #include <cassert>
-#include <cstdlib>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <arpa/inet.h>
 
@@ -37,7 +37,7 @@ bool bgp_update(bgp_peer* peer,  unsigned char* buff, int entire_length){
                 exit(1);
             }
             log(log_level::DEBUG, "Unfeasible %s/%d", inet_ntoa(in_addr{.s_addr=ntohl(unfeasible_prefix)}), prefix_len);
-            node<attribute>* unfeasible_prefix_node = search_prefix(peer->adj_ribs_in, unfeasible_prefix, prefix_len);
+            node<adj_ribs_in_data>* unfeasible_prefix_node = search_prefix(peer->adj_ribs_in, unfeasible_prefix, prefix_len);
             if(unfeasible_prefix_node->prefix_len == prefix_len){
                 delete_prefix(unfeasible_prefix_node);
                 log(log_level::DEBUG, "Withdraw success!");
@@ -47,7 +47,7 @@ bool bgp_update(bgp_peer* peer,  unsigned char* buff, int entire_length){
             }
         }
     }
-    attribute path_attr;
+    adj_ribs_in_data route_data;
     uint16_t total_path_attribute_length;
     memcpy(&total_path_attribute_length, &buff[19 + 2 + unfeasible_routes_length], 2);
     total_path_attribute_length = ntohs(total_path_attribute_length);
@@ -68,7 +68,7 @@ bool bgp_update(bgp_peer* peer,  unsigned char* buff, int entire_length){
         switch(type){
             case ORIGIN:{
                 uint8_t origin = buff[read_length];
-                path_attr.origin = origin;
+                route_data.path_attr.origin = origin;
                 log(log_level::INFO, "Origin %d", origin);
             }
                 break;
@@ -97,22 +97,22 @@ bool bgp_update(bgp_peer* peer,  unsigned char* buff, int entire_length){
                 break;
             case NEXT_HOP:{
                 assert(attribute_len == 4);
-                path_attr.next_hop = buff[read_length]*256*256*256 + buff[read_length + 1]*256*256 + buff[read_length + 2]*256 + buff[read_length + 3];
-                log(log_level::INFO, "Next Hop %s", inet_ntoa(in_addr{.s_addr = ntohl(path_attr.next_hop)}));
+                route_data.path_attr.next_hop = buff[read_length]*256*256*256 + buff[read_length + 1]*256*256 + buff[read_length + 2]*256 + buff[read_length + 3];
+                log(log_level::INFO, "Next Hop %s", inet_ntoa(in_addr{.s_addr = ntohl(route_data.path_attr.next_hop)}));
             }
                 break;
             case MULTI_EXIT_DISC:
                 uint32_t med;
                 memcpy(&med, &buff[read_length], 4);
                 med = ntohl(med);
-                path_attr.med = med;
+                route_data.path_attr.med = med;
                 log(log_level::INFO, "MED %d", med);
                 break;
             case LOCAL_PREF:{
                 uint32_t local_pref;
                 memcpy(&local_pref, &buff[read_length], 4);
                 local_pref = ntohl(local_pref);
-                path_attr.local_pref = local_pref;
+                route_data.path_attr.local_pref = local_pref;
                 log(log_level::INFO, "Local Pref %d", local_pref);
             }
                 break;
@@ -173,12 +173,13 @@ bool bgp_update(bgp_peer* peer,  unsigned char* buff, int entire_length){
         }
         log(log_level::DEBUG, "%s/%d", inet_ntoa(in_addr{.s_addr=ntohl(prefix)}), prefix_len);
         bool is_updated;
-        add_prefix(peer->adj_ribs_in, prefix, prefix_len, path_attr, &is_updated);
+        node<adj_ribs_in_data>* added = add_prefix(peer->adj_ribs_in, prefix, prefix_len, route_data, &is_updated);
         if(!is_updated){
             peer->route_count++;
         }else{
             log(log_level::DEBUG, "Route updated!");
         }
+        attempt_to_install_bgp_loc_rib(peer, added);
     }
     return true;
 }
