@@ -28,6 +28,7 @@ std::vector<bgp_client_peer> peers;
 uint32_t my_as;
 uint8_t log_id;
 uint8_t console_mode = 0;
+node<attribute>* bgp_loc_rib;
 
 void signal_handler(int sig){
 }
@@ -84,14 +85,17 @@ int main(){
         }
         peer.state = IDLE;
 
-        node* root = (node*) malloc(sizeof(node));
+        auto* root = (node<attribute>*) malloc(sizeof(node<attribute>));
         if(root == nullptr){
             log(log_level::ERROR, "Failed to allocate memory for rib root");
             exit(EXIT_FAILURE);
         }
-        peer.rib = root;
+        root->is_prefix = false;
+        root->parent = nullptr;
+        root->node_0 = nullptr;
+        root->node_1 = nullptr;
+        peer.adj_ribs_in = root;
         peer.connect_cool_time = 0;
-        //peer.is_shutdown = false;
         peers.push_back(peer);
     }
 
@@ -159,7 +163,7 @@ int main(){
     log(log_level::INFO, "Closed all peers");
 
     for(auto & peer : peers){
-        free(peer.rib); // root自体はまだ解放されていないのでここで
+        free(peer.adj_ribs_in); // root自体はまだ解放されていないのでここで
     }
     return EXIT_SUCCESS;
 }

@@ -3,10 +3,12 @@
 
 #include "tree.h"
 
+extern node<attribute>* bgp_loc_rib;
+
 class bgp_peer{
 public:
     uint8_t state;
-    node* rib;
+    node<attribute>* adj_ribs_in;
     uint32_t route_count;
 };
 
@@ -58,6 +60,14 @@ enum bgp_error_code{
     FINITE_STATE_MACHINE_ERROR = 5,
     CEASE = 6,
     ROUTE_REFRESH_MESSAGE_ERROR = 7
+};
+
+enum bgp_error_sub_code_open{
+    UNSPESIFIC = 0,
+    UNSUPPORTED_VERSION_NUMBER = 1,
+    BAD_PEER_AS = 2,
+    // ...
+
 };
 
 enum bgp_open_optional_parameter_type{

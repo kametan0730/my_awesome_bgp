@@ -12,14 +12,13 @@ bool execute_command(char* command){
         }
     }else{
         for(int i = 0; i < peers.size(); ++i){
-            node* res = search_prefix(peers[i].rib, ntohl(inet_addr(command)));
-            char prefix[16];
-            char next_hop[16];
-            memcpy(&prefix, inet_ntoa(in_addr{.s_addr = htonl(res->prefix)}), 15);
-            memcpy(&next_hop, inet_ntoa(in_addr{.s_addr = htonl(res->next_hop)}), 15);
+            node<attribute>* res = search_prefix(peers[i].adj_ribs_in, ntohl(inet_addr(command)));
+            char prefix[17];
+            char next_hop[17];
+            memcpy(&prefix, inet_ntoa(in_addr{.s_addr = htonl(res->prefix)}), 16);
+            memcpy(&next_hop, inet_ntoa(in_addr{.s_addr = htonl(res->data->next_hop)}), 16);
             console("%s/%d nexthop %s peer %d", prefix, res->prefix_len, next_hop, i);
         }
     }
-
     return false;
 }

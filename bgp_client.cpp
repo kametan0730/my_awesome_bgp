@@ -78,10 +78,10 @@ bool try_to_connect(bgp_client_peer* peer){
 }
 
 void close_peer(bgp_client_peer* peer){
-    if(peer->rib != nullptr){
+    if(peer->adj_ribs_in != nullptr){
         log(log_level::DEBUG, "Cleaned table sock %d", peer->sock);
-        delete_prefix(peer->rib, true);
-        peer->rib = nullptr;
+        delete_prefix(peer->adj_ribs_in, true);
+        peer->adj_ribs_in = nullptr;
     }
     close(peer->sock);
 }
@@ -128,6 +128,13 @@ bool loop_established(bgp_client_peer* peer){
             log(log_level::INFO, "BGP Id: %d", ntohl(bgpopp->bgp_id));
             log(log_level::INFO, "Opt Length: %d", bgpopp->opt_length);
 
+            /*
+            if(ntohs(bgpopp->my_as) != peer->remote_as){
+                send_notification(peer, bgp_error_code::OPEN_MESSAGE_ERROR, bgp_error_sub_code_open::BAD_PEER_AS);
+                return false;
+            }
+            */
+
             int read_length = 29;
             while(read_length < 29 + bgpopp->opt_length){
                 int option_type = buff[read_length];
@@ -149,6 +156,7 @@ bool loop_established(bgp_client_peer* peer){
                         break;
                 }
             }
+            peer->bgp_id = ntohl(bgpopp->bgp_id);
 
             if(!send_open(peer)){
                 log(log_level::ERROR, "Failed to send packet");
@@ -170,13 +178,13 @@ bool loop_established(bgp_client_peer* peer){
         }
         case KEEPALIVE:
             if(peer->state == OPEN_CONFIRM){
-                peer->rib->is_prefix = true;
-                peer->rib->prefix = 0;
-                peer->rib->prefix_len = 0;
-                peer->rib->next_hop = 0;
-                peer->rib->parent = nullptr;
-                peer->rib->node_0 = nullptr;
-                peer->rib->node_1 = nullptr;
+                peer->adj_ribs_in->is_prefix = true;
+                peer->adj_ribs_in->prefix = 0;
+                peer->adj_ribs_in->prefix_len = 0;
+                peer->adj_ribs_in->data = nullptr;
+                peer->adj_ribs_in->parent = nullptr;
+                peer->adj_ribs_in->node_0 = nullptr;
+                peer->adj_ribs_in->node_1 = nullptr;
                 peer->state = ESTABLISHED;
             }
             log(log_level::INFO, "Keepalive Received");

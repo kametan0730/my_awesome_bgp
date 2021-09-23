@@ -21,8 +21,8 @@ public:
     int sock;
     struct sockaddr_in server_address;
     uint32_t remote_as;
+    uint32_t bgp_id;
     uint32_t connect_cool_time;
-    //bool is_shutdown;
 };
 
 bool send_open(bgp_client_peer* peer);
