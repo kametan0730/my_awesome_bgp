@@ -1,18 +1,14 @@
-#include <iostream>
+#include <chrono>
+#include <csignal>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <cstdint>
 #include <cstring>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#include <fstream>
 #include <fcntl.h>
 #include <unistd.h>
-#include <fstream>
-#include <poll.h>
-#include <csignal>
-#include <chrono>
-#include <unistd.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <nlohmann/json.hpp>
 
 #include "bgp.h"
@@ -101,18 +97,29 @@ int main(){
 
     std::chrono::system_clock::time_point start, now;
     uint64_t real_time;
+    bool is_input_continuous = false; // ログモードの時に長いテキストを間違えてペーストしてその中にcやbが含まれていると止まってしまうので、連続で入力された場合は無視するために前回のループで入力があったかを保持する
     while(true){
         start = std::chrono::system_clock::now();
-        char input = getchar();
+        char input = getchar(); // TODO charの範囲外かもしれない
         if(console_mode == 0){
-            if(input == 'q'){
-                log(log_level::INFO, "Good bye");
-                break;
-            }else if(input == 'b'){
-                raise(SIGINT);
-            }else if(input == 'c'){
-                console_mode = 1;
-                printf("Switched to command mode\n");
+            if(input == -1){
+                is_input_continuous = false;
+            }else{
+                if(!is_input_continuous){
+                    if(input == 'q'){ // TODO ログモードからのプログラム終了は廃止したい
+                        log(log_level::INFO, "Good bye");
+                        break;
+                    }else if(input == 'b'){
+                        raise(SIGINT);
+                    }else if(input == 'c'){
+                        console_mode = 1;
+                        for(int i = 0; i < 10000; ++i){
+                            getchar(); // 連続入力の対策はしているが、もしかすると連続する文字列がcから始まるかもしれない. その場合、対策をすり抜けてしまうのでへんなコマンドが実行されないようにここでバッファをクリアする
+                        }
+                        printf("Switched to command mode\n");
+                    }
+                }
+                is_input_continuous = true;
             }
         }else{
             static char command[256];
