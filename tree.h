@@ -64,6 +64,7 @@ void delete_prefix(node<DATA_TYPE>* prefix, bool is_delete_child_prefix = false)
         prefix->node_1 = nullptr; 追記: いや、今でも発生する
         */
         tmp = prefix->node_0;
+        tmp->parent = nullptr;
         prefix->node_0 = nullptr;
         delete_prefix(prefix, true);
         return delete_prefix(tmp, true);
@@ -95,7 +96,7 @@ void delete_prefix(node<DATA_TYPE>* prefix, bool is_delete_child_prefix = false)
 template <typename DATA_TYPE>
 node<DATA_TYPE>* search_prefix(node<DATA_TYPE>* root, uint32_t address, uint8_t max_prefix_len = 32, bool is_prefix_strict = false){
     node<DATA_TYPE>* current = root;
-    node<DATA_TYPE>* next;
+    node<DATA_TYPE>* next = nullptr;
     node<DATA_TYPE>* match_node = root;
     uint8_t i = 0;
     while(i < max_prefix_len){
@@ -109,11 +110,11 @@ node<DATA_TYPE>* search_prefix(node<DATA_TYPE>* root, uint32_t address, uint8_t 
         if(next->is_prefix){
             match_node = next;
         }
-        i++;
         current = next;
+        i++;
     }
-    if(is_prefix_strict && match_node->prefix_len == 0){
-        return nullptr; // TODO あってるかよく考える
+    if(is_prefix_strict and max_prefix_len != 0 and match_node->prefix_len == 0){
+        return nullptr;
     }
     return match_node;
 }

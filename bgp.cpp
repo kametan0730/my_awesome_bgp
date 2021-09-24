@@ -29,20 +29,22 @@ bool bgp_update_handle_unfeasible_prefix(bgp_peer* peer, const unsigned char* bu
                 read_length += 5;
             }else{
                 log(log_level::ERROR, "Invalid packet");
-                exit(1); // TODO 安定してきたら、return falseにする
+                abort(); // TODO 安定してきたら、return falseにする
             }
             log(log_level::DEBUG, "Unfeasible %s/%d", inet_ntoa(in_addr{.s_addr=ntohl(unfeasible_prefix)}), prefix_len);
-            node<adj_ribs_in_data>* unfeasible_prefix_node = search_prefix(peer->adj_ribs_in, unfeasible_prefix, prefix_len);
-            if(unfeasible_prefix_node->prefix_len == prefix_len){
+            node<adj_ribs_in_data>* unfeasible_prefix_node = search_prefix(peer->adj_ribs_in, unfeasible_prefix, prefix_len, true);
+            if(unfeasible_prefix_node != nullptr){
                 if(unfeasible_prefix_node->data->installed_loc_rib_node != nullptr){
                     delete_prefix(unfeasible_prefix_node->data->installed_loc_rib_node);
-                    // log(log_level::DEBUG, "Withdrawn from loc_rib!");
+                    unfeasible_prefix_node->data->installed_loc_rib_node = nullptr;
+                    log(log_level::DEBUG, "Withdrawn from loc_rib!");
                 }
                 delete_prefix(unfeasible_prefix_node);
                 log(log_level::DEBUG, "Withdraw success!");
                 peer->route_count--;
             }else{
                 log(log_level::ERROR, "Failed to withdraw %s/%d", inet_ntoa(in_addr{.s_addr = htonl(unfeasible_prefix)}), prefix_len);
+                abort();
             }
         }
     }
@@ -189,7 +191,7 @@ bool bgp_update(bgp_peer* peer,  unsigned char* buff, int entire_length){
             log(log_level::ERROR, "Invalid packet");
             break;
         }
-        log(log_level::DEBUG, "%s/%d", inet_ntoa(in_addr{.s_addr=ntohl(prefix)}), prefix_len);
+        //log(log_level::DEBUG, "%s/%d", inet_ntoa(in_addr{.s_addr=ntohl(prefix)}), prefix_len);
         bool is_updated;
         node<adj_ribs_in_data>* added = add_prefix(peer->adj_ribs_in, prefix, prefix_len, route_data, &is_updated);
         if(!is_updated){

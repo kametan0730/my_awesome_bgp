@@ -22,6 +22,7 @@ struct adj_ribs_in_data{
 struct loc_rib_data{
     bgp_peer* peer = nullptr;
     attribute path_attr;
+    node<adj_ribs_in_data>* source_adj_ribs_in_node = nullptr;
 };
 
 struct adj_ribs_out_data{

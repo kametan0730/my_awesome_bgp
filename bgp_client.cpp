@@ -55,7 +55,6 @@ bool send_open(bgp_client_peer* peer){
 }
 
 bool try_to_connect(bgp_client_peer* peer){
-    printf("%d\n", getservbyname("bgp", "tcp")->s_port);
     peer->server_address.sin_port = getservbyname("bgp", "tcp")->s_port;
     if((peer->sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0){
         log(log_level::ERROR, "Failed to create socket");
@@ -111,7 +110,7 @@ bool loop_established(bgp_client_peer* peer){
         if(append_len <= 0){
             if(++error > 10000){
                 log(log_level::ERROR, "Failed to receive packet");
-                exit(EXIT_FAILURE);
+                abort();
             }
             continue;
         }
