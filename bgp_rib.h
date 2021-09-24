@@ -1,8 +1,10 @@
 #ifndef MY_AWESOME_BGP_BGP_RIB_H
 #define MY_AWESOME_BGP_BGP_RIB_H
 
-#include "bgp.h"
 #include "tree.h"
+
+struct bgp_peer; // from bgp.h
+struct loc_rib_data;
 
 struct attribute{
     uint8_t origin = 0;
@@ -14,12 +16,11 @@ struct attribute{
 
 struct adj_ribs_in_data{
     attribute path_attr;
+    node<loc_rib_data>* installed_loc_rib_node = nullptr;
 };
 
-struct bgp_peer;
-
 struct loc_rib_data{
-    bgp_peer* peer;
+    bgp_peer* peer = nullptr;
     attribute path_attr;
 };
 

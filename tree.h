@@ -5,8 +5,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <arpa/inet.h>
-#include <netinet/in.h>
 
 template <typename DATA_TYPE>
 struct node{

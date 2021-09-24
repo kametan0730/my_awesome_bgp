@@ -3,9 +3,13 @@
 
 #include <vector>
 
-#include "bgp_client.h"
+#include "tree.h"
+
+struct bgp_client_peer; // from bgp_client.h
+struct loc_rib_data; // from bgp_rib.h
 
 extern std::vector<bgp_client_peer> peers;
+extern node<loc_rib_data>* bgp_loc_rib;
 
 bool execute_command(char* command);
 

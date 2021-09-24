@@ -1,10 +1,9 @@
 #ifndef MY_AWESOME_BGP_BGP_H
 #define MY_AWESOME_BGP_BGP_H
 
-#include "bgp_rib.h"
 #include "tree.h"
 
-struct adj_ribs_in_data;
+struct adj_ribs_in_data; // from bgp_rib.h
 
 class bgp_peer{
 public:

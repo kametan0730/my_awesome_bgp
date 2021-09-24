@@ -1,6 +1,8 @@
 #include <cassert>
 #include <fstream>
+#include <netdb.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 
 #include "bgp_client.h"
 #include "bgp_rib.h"
@@ -53,7 +55,8 @@ bool send_open(bgp_client_peer* peer){
 }
 
 bool try_to_connect(bgp_client_peer* peer){
-    peer->server_address.sin_port = htons(179);
+    printf("%d\n", getservbyname("bgp", "tcp")->s_port);
+    peer->server_address.sin_port = getservbyname("bgp", "tcp")->s_port;
     if((peer->sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0){
         log(log_level::ERROR, "Failed to create socket");
         return false;

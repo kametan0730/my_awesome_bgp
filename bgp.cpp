@@ -5,18 +5,13 @@
 #include <arpa/inet.h>
 
 #include "bgp.h"
+#include "bgp_rib.h"
 #include "logger.h"
 
-bool bgp_update(bgp_peer* peer,  unsigned char* buff, int entire_length){
-    uint16_t unfeasible_routes_length;
-    memcpy(&unfeasible_routes_length, &buff[19], 2);
-    unfeasible_routes_length = ntohs(unfeasible_routes_length);
+bool bgp_update_handle_unfeasible_prefix(bgp_peer* peer, const unsigned char* buff, uint16_t unfeasible_routes_length){
 
-    //READ_SHORT(buff, 19, unfeasible_routes_length);
-    int read_length = 19 + 2;
+    uint32_t read_length = 21; // 19+2
     if(unfeasible_routes_length != 0){
-        //hex_dump(&buff[read_length], unfeasible_routes_length);
-        //printf("\n");
         uint32_t unfeasible_prefix;
         while(read_length < 19 + 2 + unfeasible_routes_length){
             int prefix_len = buff[read_length];
@@ -34,11 +29,15 @@ bool bgp_update(bgp_peer* peer,  unsigned char* buff, int entire_length){
                 read_length += 5;
             }else{
                 log(log_level::ERROR, "Invalid packet");
-                exit(1);
+                exit(1); // TODO 安定してきたら、return falseにする
             }
             log(log_level::DEBUG, "Unfeasible %s/%d", inet_ntoa(in_addr{.s_addr=ntohl(unfeasible_prefix)}), prefix_len);
             node<adj_ribs_in_data>* unfeasible_prefix_node = search_prefix(peer->adj_ribs_in, unfeasible_prefix, prefix_len);
             if(unfeasible_prefix_node->prefix_len == prefix_len){
+                if(unfeasible_prefix_node->data->installed_loc_rib_node != nullptr){
+                    delete_prefix(unfeasible_prefix_node->data->installed_loc_rib_node);
+                    // log(log_level::DEBUG, "Withdrawn from loc_rib!");
+                }
                 delete_prefix(unfeasible_prefix_node);
                 log(log_level::DEBUG, "Withdraw success!");
                 peer->route_count--;
@@ -47,11 +46,12 @@ bool bgp_update(bgp_peer* peer,  unsigned char* buff, int entire_length){
             }
         }
     }
-    adj_ribs_in_data route_data;
-    uint16_t total_path_attribute_length;
-    memcpy(&total_path_attribute_length, &buff[19 + 2 + unfeasible_routes_length], 2);
-    total_path_attribute_length = ntohs(total_path_attribute_length);
-    read_length = 19 + 2 + unfeasible_routes_length + 2;
+    return true;
+}
+
+bool bgp_update_handle_path_attribute(bgp_peer* peer, const unsigned char* buff, uint16_t unfeasible_routes_length, uint16_t total_path_attribute_length, adj_ribs_in_data& route_data){
+
+    int read_length = 19 + 2 + unfeasible_routes_length + 2;
     while(read_length < 19 + 2 + unfeasible_routes_length + 2 + total_path_attribute_length){
         uint8_t flag = buff[read_length];
         uint8_t type = buff[read_length + 1];
@@ -150,6 +150,24 @@ bool bgp_update(bgp_peer* peer,  unsigned char* buff, int entire_length){
         }
         read_length += attribute_len;
     }
+    return true;
+}
+
+bool bgp_update(bgp_peer* peer,  unsigned char* buff, int entire_length){
+    uint16_t unfeasible_routes_length;
+    memcpy(&unfeasible_routes_length, &buff[19], 2);
+    unfeasible_routes_length = ntohs(unfeasible_routes_length);
+    int read_length;
+
+    bgp_update_handle_unfeasible_prefix(peer, buff, unfeasible_routes_length);
+
+    adj_ribs_in_data route_data;
+    uint16_t total_path_attribute_length;
+    memcpy(&total_path_attribute_length, &buff[19 + 2 + unfeasible_routes_length], 2);
+    total_path_attribute_length = ntohs(total_path_attribute_length);
+
+    bgp_update_handle_path_attribute(peer, buff, unfeasible_routes_length, total_path_attribute_length, route_data);
+
     read_length = 19 + 2 + unfeasible_routes_length + 2 + total_path_attribute_length;
 
     while(read_length < entire_length){

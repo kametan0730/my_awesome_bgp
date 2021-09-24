@@ -2,15 +2,10 @@
 #define MY_AWESOME_BGP_BGP_CLIENT_H
 
 #include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <arpa/inet.h>
-#include <netinet/in.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 
 #include "bgp.h"
-#include "tree.h"
 
 extern uint32_t my_as;
 extern uint8_t console_mode;
