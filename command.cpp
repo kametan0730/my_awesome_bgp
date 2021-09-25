@@ -1,15 +1,21 @@
 #include <cstdio>
+#include <sstream>
 #include <string>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <sstream>
 
 #include "bgp_client.h"
 #include "bgp_rib.h"
 #include "command.h"
 #include "logger.h"
 
-bool execute_command(char* command){
+bgp_peer* get_peer_by_string(char* search){
+
+
+    return nullptr;
+}
+
+bool execute_command(const char* command){
     uint32_t param_count = 0;
     char command_param[30][10]; // TODO この辺の適当なコードをどうにかする
 

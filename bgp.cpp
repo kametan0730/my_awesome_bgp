@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <sstream>
+#include <string>
 #include <arpa/inet.h>
 
 #include "bgp.h"
@@ -22,8 +24,6 @@ bool send_notification(bgp_peer* peer, int8_t error, uint16_t error_sub){
 }
 
 bool send_update(){
-
-
 
 }
 
@@ -110,26 +110,23 @@ bool bgp_update_handle_path_attribute(bgp_peer* peer, const unsigned char* buff,
             case AS_PATH:{
                 uint8_t segment_type = buff[read_length];
                 uint8_t segment_length = buff[read_length + 1];
-                //hex_dump(&buff[read_length], attribute_len);
                 if(segment_type == bgp_path_attribute_as_path_segment_type::AS_SEQUENCE){
-                    char as_list[512];
-                    memset(as_list, 0, 511);
-                    char as_str[10];
+                    std::string as_list_str;
                     for(int i = 0; i < segment_length; i++){
                         uint16_t asn;
                         memcpy(&asn, &buff[read_length + 2 + i * 2], 2);
                         asn = ntohs(asn);
-                        // log(log_level::DEBUG, "AS Path %d", asn);
-                        memset(as_str, 0, 10);
-                        sprintf(as_str, " %d", asn);
-                        strcat(as_list, as_str);
+                        std::ostringstream oss;
+                        oss << asn;
+                        as_list_str.append(" ");
+                        as_list_str.append(oss.str());
                         if(route_data.path_attr.as_path_length < 64){
                             route_data.path_attr.as_path[route_data.path_attr.as_path_length++] = asn;
                         }else{
                             log(log_level::WARNING, "Overflowed AS PATH %d", segment_length);
                         }
                     }
-                    log(log_level::INFO, "AS Path%s", as_list);
+                    log(log_level::INFO, "AS Path%s", as_list_str.c_str());
                 }else{
                     log(log_level::DEBUG, "Unable to interpret segment type %d", segment_type);
                 }
@@ -163,22 +160,24 @@ bool bgp_update_handle_path_attribute(bgp_peer* peer, const unsigned char* buff,
             {
                 uint8_t segment_type = buff[read_length];
                 uint8_t segment_length = buff[read_length + 1];
-                //hex_dump(&buff[read_length], attribute_len);
                 if(segment_type == bgp_path_attribute_as_path_segment_type::AS_SEQUENCE){
-                    char as_list[512];
-                    memset(as_list, 0, 511);
-                    char as_str[20];
+                    std::string as_list_str;
                     for(int i = 0; i < segment_length; i++){
                         uint32_t asn;
                         memcpy(&asn, &buff[read_length + 2 + i * 4], 4);
                         asn = ntohl(asn);
-                        // log(log_level::DEBUG, "AS Path %d", asn);
-
-                        memset(as_str, 0, 20);
-                        sprintf(as_str, " %d", asn);
-                        strcat(as_list, as_str);
+                        std::ostringstream oss;
+                        oss << asn;
+                        as_list_str.append(" ");
+                        as_list_str.append(oss.str());
+                        /*
+                        if(route_data.path_attr.as4_path_length < 64){
+                            route_data.path_attr.as4_path[route_data.path_attr.as_path_length++] = asn;
+                        }else{
+                            log(log_level::WARNING, "Overflowed AS4 PATH %d", segment_length);
+                        }*/
                     }
-                    log(log_level::INFO, "AS4 Path%s", as_list);
+                    log(log_level::INFO, "AS4 Path%s", as_list_str.c_str());
                 }else{
                     log(log_level::DEBUG, "Unable to interpret segment type %d", segment_type);
                 }
