@@ -188,6 +188,7 @@ int main(){
                     }
                     memset(command, 0, 255);
                     offset = 0;
+                    printf("> ");
                 }
             }
         }
