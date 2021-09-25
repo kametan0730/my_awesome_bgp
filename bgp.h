@@ -57,6 +57,12 @@ enum bgp_path_attribute_type{
     AS4_AGGREGATOR = 18,
 };
 
+enum bgp_path_attribute_origin{
+    IGP = 0,
+    EGP = 1,
+    INCOMPLETE = 2
+};
+
 enum bgp_error_code{
     MESSAGE_HEADER_ERROR = 1,
     OPEN_MESSAGE_ERROR = 2,
@@ -123,6 +129,17 @@ struct bgp_notification{
     unsigned char data[];
 } __attribute__((packed));
 
+struct bgp_path_attribute_common{
+    uint8_t flag;
+    uint8_t type;
+
+} __attribute__((packed));
+
+struct attributes;
+
+void hex_dump(unsigned char* buffer, int len, bool is_separate = false);
+
+bool send_update_with_nlri(bgp_peer* peer, attributes* attr, uint32_t prefix, uint8_t prefix_len);
 bool send_notification(bgp_peer* peer, int8_t error, uint16_t error_sub);
 bool send_open(bgp_peer* peer);
 

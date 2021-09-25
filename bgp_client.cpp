@@ -21,20 +21,6 @@ bool bgp_client_peer::send(void* buffer, size_t length){
     return true;
 }
 
-void hex_dump(unsigned char* buffer, int len, bool is_separate = false){
-    if(console_mode == 1){
-        return;
-    }
-    if(is_separate) printf("|");
-    for(int i = 0; i < len; ++i){
-        if(is_separate){
-            printf("%02x|", buffer[i]);
-        }else{
-            printf("%02x", buffer[i]);
-        }
-    }
-    printf("\n");
-}
 
 bool try_to_connect(bgp_client_peer* peer){
     peer->server_address.sin_port = getservbyname("bgp", "tcp")->s_port;
@@ -70,9 +56,9 @@ void close_client_peer(bgp_client_peer* peer){
 
 bool loop_established(bgp_client_peer* peer){
     int len;
-    unsigned char buff[10000];
+    unsigned char buff[4096];
     //printf("\e[m");
-    memset(buff, 0x00, 10000);
+    memset(buff, 0x00, 4096);
     len = recv(peer->sock, &buff, 19, 0);
     if(len <= 0){
         return true;
@@ -158,7 +144,7 @@ bool loop_established(bgp_client_peer* peer){
             log(log_level::NOTICE, "Sub: %d", bgpntp->error_sub);
             return false;
         }
-        case KEEPALIVE:
+        case KEEPALIVE:{
             if(peer->state == OPEN_CONFIRM){
                 peer->adj_ribs_in->is_prefix = true;
                 peer->adj_ribs_in->prefix = 0;
@@ -178,6 +164,13 @@ bool loop_established(bgp_client_peer* peer){
                 log(log_level::ERROR, "Failed to send packet");
                 return false;
             }
+            attributes a;
+            a.origin = IGP;
+            a.as_path_length = 1;
+            a.as_path[0] = 65017;
+            a.next_hop = inet_addr("172.16.3.1");
+            send_update_with_nlri(peer, &a, inet_addr("192.0.2.0"), 24);
+        }
             break;
         default:
             printf("\e[7m");

@@ -2,35 +2,37 @@
 #include "bgp_rib.h"
 #include "logger.h"
 
-bool best_path_selection_battle(bgp_peer* my_peer, node<adj_ribs_in_data>* me, node<loc_rib_data>* opponent){
+bool best_path_selection_battle(bgp_peer* my_peer, node<adj_ribs_in_data>* me, node<loc_rib_data>* opponent){ // TODO 古い自分のピアとの経路との対決でエラーになりそう
     if(me->data->path_attr.local_pref != opponent->data->path_attr->local_pref){
         if(me->data->path_attr.local_pref > opponent->data->path_attr->local_pref){
             return true;
         }
         return false;
     }
-
+    if(me->data->path_attr.as_path_length != opponent->data->path_attr->as_path_length){
+        if(me->data->path_attr.as_path_length < opponent->data->path_attr->as_path_length){
+            return true;
+        }
+        return false;
+    }
     if(me->data->path_attr.origin != opponent->data->path_attr->origin){
         if(me->data->path_attr.origin < opponent->data->path_attr->origin){
             return true;
         }
         return false;
     }
-
     if(me->data->path_attr.med != opponent->data->path_attr->med){
         if(me->data->path_attr.med < opponent->data->path_attr->med){
             return true;
         }
         return false;
     }
-
     if(my_peer->bgp_id != opponent->data->peer->bgp_id){
         if(my_peer->bgp_id < opponent->data->peer->bgp_id){
             return true;
         }
         return false;
     }
-
     return true;
 }
 

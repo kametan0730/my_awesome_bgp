@@ -70,7 +70,7 @@ int main(){
     my_as = conf_json.at("my_as").get<int>();
     log(log_level::INFO, "My AS: %d", my_as);
 
-    router_id = inet_addr(conf_json.at("router-id").get<std::string>().c_str());
+    router_id = ntohl(inet_addr(conf_json.at("router-id").get<std::string>().c_str()));
     log(log_level::INFO, "Router-ID: %d", router_id);
 
     bgp_loc_rib = (node<loc_rib_data>*) malloc(sizeof(node<loc_rib_data>));

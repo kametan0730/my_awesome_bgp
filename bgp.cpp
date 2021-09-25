@@ -13,6 +13,23 @@
 #define BGP_VERSION 4
 #define BGP_HOLD_TIME 180
 
+#define BGP_HEADER_SIZE 19
+
+void hex_dump(unsigned char* buffer, int len, bool is_separate){
+    if(console_mode == 1){
+        return;
+    }
+    if(is_separate) printf("|");
+    for(int i = 0; i < len; ++i){
+        if(is_separate){
+            printf("%02x|", buffer[i]);
+        }else{
+            printf("%02x", buffer[i]);
+        }
+    }
+    printf("\n");
+}
+
 bool send_notification(bgp_peer* peer, int8_t error, uint16_t error_sub){
     bgp_notification notification;
     memset(notification.header.maker, 0xff, 16);
@@ -23,8 +40,81 @@ bool send_notification(bgp_peer* peer, int8_t error, uint16_t error_sub){
     return peer->send(&notification, 19);
 }
 
-bool send_update(){
+size_t encode_bgp_path_attributes_to_buffer(attributes* attr, unsigned char* buffer, size_t start_point){
+    size_t pointer = start_point;
+    uint8_t flag = 0;
+    flag |= TRANSITIVE;
 
+    /** Origin **/
+    buffer[pointer++] = flag;
+    buffer[pointer++] = ORIGIN;
+    buffer[pointer++] = 1;
+    buffer[pointer++] = attr->origin;
+
+    /** AS Path **/
+    flag = 0;
+    flag |= TRANSITIVE;
+    flag |= EXTENDED_LENGTH;
+    buffer[pointer++] = flag;
+    buffer[pointer++] = AS_PATH;
+    uint16_t ex_len = htons(attr->as_path_length * 2 + 2);
+    memcpy(&buffer[pointer], &ex_len, 2);
+    pointer += 2;
+    buffer[pointer++] = AS_SEQUENCE;
+    buffer[pointer++] = attr->as_path_length;
+    for(int i = 0; i < attr->as_path_length; ++i){
+        uint16_t asn = htons(attr->as_path[i]);
+        memcpy(&buffer[pointer], &asn, 2);
+        pointer += 2;
+    }
+
+    flag = 0;
+    flag |= TRANSITIVE;
+    buffer[pointer++] = flag;
+    buffer[pointer++] = NEXT_HOP;
+    buffer[pointer++] = 4;
+    memcpy(&buffer[pointer], &attr->next_hop, 4);
+    pointer += 4;
+
+    return pointer - start_point;
+}
+
+bool send_update_with_nlri(bgp_peer* peer, attributes* attr, uint32_t prefix, uint8_t prefix_len){
+    unsigned char buffer[1000];
+    memset(buffer, 0, 1000);
+    uint16_t pointer = BGP_HEADER_SIZE;
+
+    buffer[pointer++] = 0; // withdraw routes length (2byte)
+    buffer[pointer++] = 0;
+
+    pointer += 2;
+    size_t attr_size = encode_bgp_path_attributes_to_buffer(attr, buffer, pointer);
+    size_t attr_size_ordered = htons(attr_size);
+    memcpy(&buffer[pointer-2], &attr_size_ordered, 2);
+    pointer += attr_size;
+
+    buffer[pointer++] = prefix_len;
+    if(prefix_len <= 8){
+        memcpy(&buffer[pointer], &prefix, 1);
+        pointer += 1;
+    }else if(prefix_len <= 16){
+        memcpy(&buffer[pointer], &prefix, 2);
+        pointer += 2;
+    }else if(prefix_len <= 24){
+        memcpy(&buffer[pointer], &prefix, 3);
+        pointer += 3;
+    }else if(prefix_len <= 32){
+        memcpy(&buffer[pointer], &prefix, 4);
+        pointer += 4;
+    }
+
+    bgp_header header;
+    memset(header.maker, 0xff, 16);
+    header.type = UPDATE;
+    header.length = htons(pointer);
+    memcpy(&buffer[0], &header, BGP_HEADER_SIZE);
+    hex_dump(buffer, pointer);
+    return peer->send(buffer, pointer);
 }
 
 bool send_open(bgp_peer* peer){
@@ -184,7 +274,7 @@ bool bgp_update_handle_path_attribute(bgp_peer* peer, const unsigned char* buff,
             }
                 break;
             default:
-                log(log_level::INFO, "Unhandled path attribute type %d", type);
+                log(log_level::INFO, "Unhandled path attributes type %d", type);
                 break;
         }
         read_length += attribute_len;
