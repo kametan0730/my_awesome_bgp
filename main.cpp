@@ -113,26 +113,6 @@ int main(){
         peers.push_back(peer);
     }
 
-    /*
-    for(auto &network: conf_json.at("networks")){
-        loc_rib_data data{
-                .peer = &peers[0],
-                .path_attr = {
-                        .origin = 0,
-                        .next_hop = 0,
-                        .med = 0,
-                        .local_pref = 200
-                }
-        };
-        in_addr address = {};
-        if(inet_aton(network.at("prefix").get<std::string>().c_str(), &address) == 0){
-            log(log_level::ERROR, "Invalid IP address in config");
-            exit(EXIT_FAILURE);
-        }
-        add_prefix(bgp_loc_rib, ntohl(address.s_addr), network.at("prefix-length"), data);
-    }
-    */
-
     std::chrono::system_clock::time_point start, now;
     uint64_t real_time;
     bool is_input_continuous = false; // ログモードの時に長いテキストを間違えてペーストしてその中にcやbが含まれていると止まってしまうので、連続で入力された場合は無視するために前回のループで入力があったかを保持する
@@ -181,6 +161,25 @@ int main(){
                     }else if(strcmp(command, "shutdown") == 0){
                         console("Good bye");
                         break;
+                    }else if(strcmp(command, "test") == 0){
+                        for(int i = 0; i < peers.size(); ++i){
+
+                            for(auto &network: conf_json.at("networks")){
+                                in_addr address = {};
+                                if(inet_aton(network.at("prefix").get<std::string>().c_str(), &address) == 0){
+                                    log(log_level::ERROR, "Invalid IP address in config");
+                                    exit(EXIT_FAILURE);
+                                }
+                                attributes a;
+                                a.origin = IGP;
+                                a.as_path_length = 1;
+                                a.as_path[0] = my_as;
+                                a.next_hop = inet_addr("172.16.3.0");
+                                a.med = 100;
+                                send_update_with_nlri(&peers[i], &a, address.s_addr, network.at("prefix-length"));
+                            }
+
+                        }
                     }else{
                         if(!execute_command(command)){
                             console("Command not found");

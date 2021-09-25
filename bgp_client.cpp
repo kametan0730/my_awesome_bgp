@@ -169,13 +169,6 @@ bool loop_established(bgp_client_peer* peer){
                 log(log_level::ERROR, "Failed to send packet");
                 return false;
             }
-            attributes a;
-            a.origin = INCOMPLETE;
-            a.as_path_length = 1;
-            a.as_path[0] = 65017;
-            a.next_hop = inet_addr("172.16.3.1");
-            a.med = 100;
-            //send_update_with_nlri(peer, &a, inet_addr("192.0.2.0"), 24);
         }
             break;
         default:
