@@ -8,6 +8,33 @@
 #include "bgp_rib.h"
 #include "logger.h"
 
+#define BGP_VERSION 4
+#define BGP_HOLD_TIME 180
+
+bool send_notification(bgp_peer* peer, int8_t error, uint16_t error_sub){
+    bgp_notification notification;
+    memset(notification.header.maker, 0xff, 16);
+    notification.header.length = htons(19);
+    notification.header.type = NOTIFICATION;
+    notification.error = error;
+    notification.error_sub = htons(error_sub);
+    return peer->send(&notification, 19);
+}
+
+bool send_open(bgp_peer* peer){
+    bgp_open open;
+    memset(open.header.maker, 0xff, 16);
+    open.header.length = htons(29);
+    open.header.type = OPEN;
+    open.version = BGP_VERSION;
+    open.my_as = htons(my_as);
+    open.hold_time = htons(BGP_HOLD_TIME);
+    open.bgp_id = htonl(router_id);
+    open.opt_length = 0;
+
+    return peer->send(&open, 29);
+}
+
 bool bgp_update_handle_unfeasible_prefix(bgp_peer* peer, const unsigned char* buff, uint16_t unfeasible_routes_length){
 
     uint32_t read_length = 21; // 19+2

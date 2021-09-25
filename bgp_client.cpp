@@ -9,13 +9,17 @@
 #include "logger.h"
 #include "tcp_socket.h"
 
-#define BGP_VERSION 4
-#define BGP_HOLD_TIME 180
-
 #define CONNECT_TIMEOUT_MS 1000
 
 #define COOL_LOOP_TIME_CONNECTION_REFUSED 100000
 #define COOL_LOOP_TIME_PEER_DOWN 10000
+
+bool bgp_client_peer::send(void* buffer, size_t length){
+    if(::send(this->sock, buffer, length, 0) <= 0){
+        return false;
+    }
+    return true;
+}
 
 void hex_dump(unsigned char* buffer, int len, bool is_separate = false){
     if(console_mode == 1){
@@ -32,43 +36,14 @@ void hex_dump(unsigned char* buffer, int len, bool is_separate = false){
     printf("\n");
 }
 
-bool send_notification(bgp_client_peer* peer, int8_t error, uint16_t error_sub){
-    bgp_notification notification;
-    memset(notification.header.maker, 0xff, 16);
-    notification.header.length = htons(19);
-    notification.header.type = NOTIFICATION;
-    notification.error = error;
-    notification.error_sub = htons(error_sub);
-    if(send(peer->sock, &notification, 19, 0) <= 0){
-        return false;
-    }
-    return true;
-}
-
-bool send_open(bgp_client_peer* peer){
-    bgp_open open;
-    memset(open.header.maker, 0xff, 16);
-    open.header.length = htons(29);
-    open.header.type = OPEN;
-    open.version = BGP_VERSION;
-    open.my_as = htons(my_as);
-    open.hold_time = htons(BGP_HOLD_TIME);
-    open.bgp_id = htonl(router_id);
-    open.opt_length = 0;
-
-    if(send(peer->sock, &open, 29, 0) <= 0){
-        return false;
-    }
-    return true;
-}
-
 bool try_to_connect(bgp_client_peer* peer){
     peer->server_address.sin_port = getservbyname("bgp", "tcp")->s_port;
     if((peer->sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0){
         log(log_level::ERROR, "Failed to create socket");
         return false;
     }
-    if(connect_with_timeout(peer->sock, (struct sockaddr*) &peer->server_address, sizeof(peer->server_address), CONNECT_TIMEOUT_MS) < 0){
+    if(connect_with_timeout(peer->sock, (struct sockaddr*) &peer->server_address, sizeof(peer->server_address),
+                            CONNECT_TIMEOUT_MS) < 0){
         if(errno == EINTR){
             log(log_level::ERROR, "Timeout to connect server");
         }else{
@@ -85,7 +60,7 @@ bool try_to_connect(bgp_client_peer* peer){
     return true;
 }
 
-void close_peer(bgp_client_peer* peer){
+void close_client_peer(bgp_client_peer* peer){
     if(peer->adj_ribs_in != nullptr){ // おそらくalways true
         log(log_level::DEBUG, "Cleaned table sock %d", peer->sock);
         delete_prefix(peer->adj_ribs_in, true); // TODO bgp_loc_ribから経路を削除する
@@ -200,7 +175,7 @@ bool loop_established(bgp_client_peer* peer){
             memset(header.maker, 0xff, 16);
             header.length = htons(19);
             header.type = KEEPALIVE;
-            if(send(peer->sock, &header, len, 0) <= 0){
+            if(!peer->send(&header, len)){
                 log(log_level::ERROR, "Failed to send packet");
                 return false;
             }
@@ -231,7 +206,7 @@ bool bgp_client_loop(bgp_client_peer* peer){
         case ESTABLISHED:
             if(!loop_established(peer)){
                 peer->state = IDLE;
-                close_peer(peer);
+                close_client_peer(peer);
             }
             break;
     }

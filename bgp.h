@@ -3,14 +3,18 @@
 
 #include "tree.h"
 
+extern uint32_t my_as;
+extern uint32_t router_id;
+
 struct adj_ribs_in_data; // from bgp_rib.h
 
 class bgp_peer{
 public:
-    uint8_t state;
-    node<adj_ribs_in_data>* adj_ribs_in;
-    uint32_t bgp_id;
-    uint32_t route_count;
+    uint8_t state = 0;
+    node<adj_ribs_in_data>* adj_ribs_in = nullptr;
+    uint32_t bgp_id = 0;
+    uint32_t route_count = 0;
+    virtual bool send(void* buffer, size_t length) = 0;
 };
 
 enum bgp_peer_state{
@@ -118,6 +122,9 @@ struct bgp_notification{
     uint8_t error_sub;
     unsigned char data[];
 } __attribute__((packed));
+
+bool send_notification(bgp_peer* peer, int8_t error, uint16_t error_sub);
+bool send_open(bgp_peer* peer);
 
 bool bgp_update(bgp_peer* peer,  unsigned char* buff, int entire_length);
 

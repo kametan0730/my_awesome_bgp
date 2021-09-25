@@ -87,10 +87,9 @@ int main(){
     bgp_loc_rib->node_1 = nullptr;
 
     for(auto &neighbor: conf_json.at("neighbors")){
-        bgp_client_peer peer{
-                .sock = 0,
-                .remote_as = neighbor.at("remote-as")
-        };
+        bgp_client_peer peer;
+        peer.sock = 0;
+        peer.remote_as = neighbor.at("remote-as");
         peer.state = ACTIVE;
         peer.server_address.sin_family = AF_INET;
 
@@ -208,7 +207,7 @@ int main(){
     }
 
     for(auto & peer : peers){
-        close_peer(&peer);
+        close_client_peer(&peer);
     }
     log(log_level::INFO, "Closed all peers");
 
