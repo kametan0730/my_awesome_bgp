@@ -140,30 +140,25 @@ int main(){
                 is_input_continuous = true;
             }
         }else{
-            static char command[256];
-            static uint8_t offset = 0;
+            static std::string cmd_str;
             if(input != -1){
                 if(input >= 0x20 and input <= 0x7e){
-                    if(offset <= 250){
-                        command[offset] = input;
-                        command[++offset] = '\0';
-                    }
+                    cmd_str.push_back(input);
                 }else if(input == 0x0a){
-                    if(command[0] == '\0'){
-                    }else if(strcmp(command, "exit") == 0){
+                    if(cmd_str.empty()){
+                    }else if(cmd_str == "exit"){
                         console_mode = 0;
                         printf("Switched to log mode\n");
-                    }else if(strcmp(command, "break") == 0){
+                    }else if(cmd_str == "break"){
                         raise(SIGINT);
-                    }else if(strcmp(command, "uptime") == 0){
+                    }else if(cmd_str == "uptime"){
                         now = std::chrono::system_clock::now();
                         console("Uptime %d seconds", std::chrono::duration_cast<std::chrono::seconds>(now-up).count());
-                    }else if(strcmp(command, "shutdown") == 0){
+                    }else if(cmd_str == "shutdown"){
                         console("Good bye");
                         break;
-                    }else if(strcmp(command, "test") == 0){
+                    }else if(cmd_str == "test"){
                         for(int i = 0; i < peers.size(); ++i){
-
                             for(auto &network: conf_json.at("networks")){
                                 in_addr address = {};
                                 if(inet_aton(network.at("prefix").get<std::string>().c_str(), &address) == 0){
@@ -178,15 +173,13 @@ int main(){
                                 a.med = 100;
                                 send_update_with_nlri(&peers[i], &a, address.s_addr, network.at("prefix-length"));
                             }
-
                         }
                     }else{
-                        if(!execute_command(command)){
+                        if(!execute_command(cmd_str)){
                             console("Command not found");
                         }
                     }
-                    memset(command, 0, 255);
-                    offset = 0;
+                    cmd_str.clear();
                     if(console_mode == 1){ // Exitされていないなら
                         printf("> ");
                     }
