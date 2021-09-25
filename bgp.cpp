@@ -76,6 +76,15 @@ size_t encode_bgp_path_attributes_to_buffer(attributes* attr, unsigned char* buf
     memcpy(&buffer[pointer], &attr->next_hop, 4);
     pointer += 4;
 
+    flag = 0;
+    flag |= OPTIONAL;
+    buffer[pointer++] = flag;
+    buffer[pointer++] = MULTI_EXIT_DISC;
+    buffer[pointer++] = 4;
+    uint32_t med = htonl(attr->med);
+    memcpy(&buffer[pointer], &med, 4);
+    pointer += 4;
+
     return pointer - start_point;
 }
 
