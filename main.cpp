@@ -188,7 +188,10 @@ int main(){
                     }
                     memset(command, 0, 255);
                     offset = 0;
-                    printf("> ");
+                    if(console_mode == 1){ // Exitされていないなら
+                        printf("> ");
+                    }
+
                 }
             }
         }

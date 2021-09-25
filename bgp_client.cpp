@@ -42,8 +42,7 @@ bool try_to_connect(bgp_client_peer* peer){
         log(log_level::ERROR, "Failed to create socket");
         return false;
     }
-    if(connect_with_timeout(peer->sock, (struct sockaddr*) &peer->server_address, sizeof(peer->server_address),
-                            CONNECT_TIMEOUT_MS) < 0){
+    if(connect_with_timeout(peer->sock, (struct sockaddr*) &peer->server_address, sizeof(peer->server_address), CONNECT_TIMEOUT_MS) < 0){
         if(errno == EINTR){
             log(log_level::ERROR, "Timeout to connect server");
         }else{

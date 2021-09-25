@@ -5,9 +5,12 @@
 
 struct bgp_peer; // from bgp.h
 struct loc_rib_data;
+struct adj_ribs_out_data;
 
 struct attribute{
     uint8_t origin = 0;
+    uint8_t as_path_length = 0;
+    uint32_t as_path[64]{}; // TODO 可変長のが良い
     uint32_t next_hop = 0;
     uint32_t med = 0;
     uint32_t local_pref = 0;
@@ -21,12 +24,14 @@ struct adj_ribs_in_data{
 
 struct loc_rib_data{
     bgp_peer* peer = nullptr;
-    attribute path_attr;
+    attribute* path_attr = nullptr;
     node<adj_ribs_in_data>* source_adj_ribs_in_node = nullptr;
+    node<adj_ribs_out_data>* installed_adj_ribs_out_node = nullptr;
 };
 
 struct adj_ribs_out_data{
-    attribute path_attr;
+    attribute* path_attr = nullptr;
+    node<loc_rib_data>* source_loc_rib_node = nullptr;
 };
 
 extern node<loc_rib_data>* bgp_loc_rib;

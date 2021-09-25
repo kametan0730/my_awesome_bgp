@@ -21,6 +21,12 @@ bool send_notification(bgp_peer* peer, int8_t error, uint16_t error_sub){
     return peer->send(&notification, 19);
 }
 
+bool send_update(){
+
+
+
+}
+
 bool send_open(bgp_peer* peer){
     bgp_open open;
     memset(open.header.maker, 0xff, 16);
@@ -106,8 +112,8 @@ bool bgp_update_handle_path_attribute(bgp_peer* peer, const unsigned char* buff,
                 uint8_t segment_length = buff[read_length + 1];
                 //hex_dump(&buff[read_length], attribute_len);
                 if(segment_type == bgp_path_attribute_as_path_segment_type::AS_SEQUENCE){
-                    char as_list[256];
-                    memset(as_list, 0, 255);
+                    char as_list[512];
+                    memset(as_list, 0, 511);
                     char as_str[10];
                     for(int i = 0; i < segment_length; i++){
                         uint16_t asn;
@@ -117,6 +123,11 @@ bool bgp_update_handle_path_attribute(bgp_peer* peer, const unsigned char* buff,
                         memset(as_str, 0, 10);
                         sprintf(as_str, " %d", asn);
                         strcat(as_list, as_str);
+                        if(route_data.path_attr.as_path_length < 64){
+                            route_data.path_attr.as_path[route_data.path_attr.as_path_length++] = asn;
+                        }else{
+                            log(log_level::WARNING, "Overflowed AS PATH %d", segment_length);
+                        }
                     }
                     log(log_level::INFO, "AS Path%s", as_list);
                 }else{
@@ -154,16 +165,16 @@ bool bgp_update_handle_path_attribute(bgp_peer* peer, const unsigned char* buff,
                 uint8_t segment_length = buff[read_length + 1];
                 //hex_dump(&buff[read_length], attribute_len);
                 if(segment_type == bgp_path_attribute_as_path_segment_type::AS_SEQUENCE){
-                    char as_list[256];
-                    memset(as_list, 0, 255);
-                    char as_str[10];
+                    char as_list[512];
+                    memset(as_list, 0, 511);
+                    char as_str[20];
                     for(int i = 0; i < segment_length; i++){
                         uint32_t asn;
                         memcpy(&asn, &buff[read_length + 2 + i * 4], 4);
                         asn = ntohl(asn);
                         // log(log_level::DEBUG, "AS Path %d", asn);
 
-                        memset(as_str, 0, 10);
+                        memset(as_str, 0, 20);
                         sprintf(as_str, " %d", asn);
                         strcat(as_list, as_str);
                     }

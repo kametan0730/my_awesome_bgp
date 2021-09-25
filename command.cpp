@@ -1,6 +1,8 @@
 #include <cstdio>
+#include <string>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <sstream>
 
 #include "bgp_client.h"
 #include "bgp_rib.h"
@@ -51,11 +53,20 @@ bool execute_command(char* command){
                 char prefix[16];
                 char next_hop[16];
                 if(res->is_prefix and res->data != nullptr){ // TODO is_prefixがtrueでdataがnullptrの時がどのような場合かよく考える
+                    std::string as_path_str;
+                    for(int j = 0; j < res->data->path_attr.as_path_length; ++j){
+                        std::ostringstream oss;
+                        oss << res->data->path_attr.as_path[j];
+                        as_path_str.append(oss.str());
+                        as_path_str.append(" ");
+                    }
+
                     memcpy(&prefix, inet_ntoa(in_addr{.s_addr = htonl(res->prefix)}), 16);
                     memcpy(&next_hop, inet_ntoa(in_addr{.s_addr = htonl(res->data->path_attr.next_hop)}), 16);
                     console("%s/%d  origin %d, nexthop %s, med %d, local-pref %d, peer %d", prefix, res->prefix_len,
                             res->data->path_attr.origin, next_hop, res->data->path_attr.med,
                             res->data->path_attr.local_pref, i);
+                    console("as-path %s length %d", as_path_str.c_str(), res->data->path_attr.as_path_length);
                 }
             }
 
@@ -64,10 +75,10 @@ bool execute_command(char* command){
             char next_hop[16];
             if(res->is_prefix and res->data != nullptr){
                 memcpy(&prefix, inet_ntoa(in_addr{.s_addr = htonl(res->prefix)}), 16);
-                memcpy(&next_hop, inet_ntoa(in_addr{.s_addr = htonl(res->data->path_attr.next_hop)}), 16);
+                memcpy(&next_hop, inet_ntoa(in_addr{.s_addr = htonl(res->data->path_attr->next_hop)}), 16);
                 console("%s/%d  origin %d, nexthop %s, med %d, local-pref %d, loc_rib", prefix, res->prefix_len,
-                        res->data->path_attr.origin, next_hop, res->data->path_attr.med,
-                        res->data->path_attr.local_pref);
+                        res->data->path_attr->origin, next_hop, res->data->path_attr->med,
+                        res->data->path_attr->local_pref);
             }
 
             return true;

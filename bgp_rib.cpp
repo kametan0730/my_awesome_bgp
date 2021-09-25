@@ -3,22 +3,22 @@
 #include "logger.h"
 
 bool best_path_selection_battle(bgp_peer* my_peer, node<adj_ribs_in_data>* me, node<loc_rib_data>* opponent){
-    if(me->data->path_attr.local_pref != opponent->data->path_attr.local_pref){
-        if(me->data->path_attr.local_pref > opponent->data->path_attr.local_pref){
+    if(me->data->path_attr.local_pref != opponent->data->path_attr->local_pref){
+        if(me->data->path_attr.local_pref > opponent->data->path_attr->local_pref){
             return true;
         }
         return false;
     }
 
-    if(me->data->path_attr.origin != opponent->data->path_attr.origin){
-        if(me->data->path_attr.origin < opponent->data->path_attr.origin){
+    if(me->data->path_attr.origin != opponent->data->path_attr->origin){
+        if(me->data->path_attr.origin < opponent->data->path_attr->origin){
             return true;
         }
         return false;
     }
 
-    if(me->data->path_attr.med != opponent->data->path_attr.med){
-        if(me->data->path_attr.med < opponent->data->path_attr.med){
+    if(me->data->path_attr.med != opponent->data->path_attr->med){
+        if(me->data->path_attr.med < opponent->data->path_attr->med){
             return true;
         }
         return false;
@@ -45,7 +45,7 @@ bool attempt_to_install_bgp_loc_rib(bgp_peer* my_peer, node<adj_ribs_in_data>* r
         loc_rib_data data;
         data.peer = my_peer;
         data.source_adj_ribs_in_node = route;
-        memcpy(&data.path_attr, &route->data->path_attr, sizeof(attribute));
+        data.path_attr = &route->data->path_attr;
         node<loc_rib_data>* res = add_prefix(bgp_loc_rib, route->prefix, route->prefix_len, data);
         route->data->installed_loc_rib_node = res;
         // log(log_level::INFO, "New route installed to loc_rib");
