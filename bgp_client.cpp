@@ -9,6 +9,14 @@
 #include "logger.h"
 #include "tcp_socket.h"
 
+#define BGP_VERSION 4
+#define BGP_HOLD_TIME 180
+
+#define CONNECT_TIMEOUT_MS 1000
+
+#define COOL_LOOP_TIME_CONNECTION_REFUSED 100000
+#define COOL_LOOP_TIME_PEER_DOWN 10000
+
 void hex_dump(unsigned char* buffer, int len, bool is_separate = false){
     if(console_mode == 1){
         return;
@@ -42,10 +50,10 @@ bool send_open(bgp_client_peer* peer){
     memset(open.header.maker, 0xff, 16);
     open.header.length = htons(29);
     open.header.type = OPEN;
-    open.version = 4;
+    open.version = BGP_VERSION;
     open.my_as = htons(my_as);
-    open.hold_time = htons(180);
-    open.bgp_id = htonl(373737373);
+    open.hold_time = htons(BGP_HOLD_TIME);
+    open.bgp_id = htonl(router_id);
     open.opt_length = 0;
 
     if(send(peer->sock, &open, 29, 0) <= 0){
@@ -60,7 +68,7 @@ bool try_to_connect(bgp_client_peer* peer){
         log(log_level::ERROR, "Failed to create socket");
         return false;
     }
-    if(connect_with_timeout(peer->sock, (struct sockaddr*) &peer->server_address, sizeof(peer->server_address), 1000) < 0){
+    if(connect_with_timeout(peer->sock, (struct sockaddr*) &peer->server_address, sizeof(peer->server_address), CONNECT_TIMEOUT_MS) < 0){
         if(errno == EINTR){
             log(log_level::ERROR, "Timeout to connect server");
         }else{
@@ -78,10 +86,10 @@ bool try_to_connect(bgp_client_peer* peer){
 }
 
 void close_peer(bgp_client_peer* peer){
-    if(peer->adj_ribs_in != nullptr){
+    if(peer->adj_ribs_in != nullptr){ // おそらくalways true
         log(log_level::DEBUG, "Cleaned table sock %d", peer->sock);
-        delete_prefix(peer->adj_ribs_in, true);
-        peer->adj_ribs_in = nullptr;
+        delete_prefix(peer->adj_ribs_in, true); // TODO bgp_loc_ribから経路を削除する
+        // peer->adj_ribs_in = nullptr;
     }
     close(peer->sock);
 }
@@ -212,9 +220,9 @@ bool bgp_client_loop(bgp_client_peer* peer){
                 if(try_to_connect(peer)){
                     peer->state = OPEN_CONFIRM;
                 }else{
-                    peer->connect_cool_time = 100000;
+                    peer->connect_cool_time = COOL_LOOP_TIME_CONNECTION_REFUSED;
                 }
-                peer->connect_cool_time = 10000;
+                peer->connect_cool_time = COOL_LOOP_TIME_PEER_DOWN;
             }else{
                 peer->connect_cool_time--;
             }

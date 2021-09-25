@@ -8,6 +8,7 @@
 #include "bgp.h"
 
 extern uint32_t my_as;
+extern uint32_t router_id;
 extern uint8_t console_mode;
 
 class bgp_client_peer : public bgp_peer{

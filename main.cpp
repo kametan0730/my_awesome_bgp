@@ -19,10 +19,12 @@
 #include "tree.h"
 
 #define CONFIG_PATH "../config.json"
+#define LOOP_MINIMUM_US 100 // 0.0001秒
 
 std::vector<bgp_client_peer> peers;
 
 uint32_t my_as;
+uint32_t router_id;
 uint8_t log_id;
 uint8_t console_mode = 0;
 node<loc_rib_data>* bgp_loc_rib;
@@ -68,6 +70,9 @@ int main(){
     my_as = conf_json.at("my_as").get<int>();
     log(log_level::INFO, "My AS: %d", my_as);
 
+    router_id = inet_addr(conf_json.at("router-id").get<std::string>().c_str());
+    log(log_level::INFO, "Router-ID: %d", router_id);
+
     bgp_loc_rib = (node<loc_rib_data>*) malloc(sizeof(node<loc_rib_data>));
     if(bgp_loc_rib == nullptr){
         log(log_level::ERROR, "Failed to allocate memory for loc_rib root");
@@ -109,6 +114,7 @@ int main(){
         peers.push_back(peer);
     }
 
+    /*
     for(auto &network: conf_json.at("networks")){
         loc_rib_data data{
                 .peer = &peers[0],
@@ -126,6 +132,7 @@ int main(){
         }
         add_prefix(bgp_loc_rib, ntohl(address.s_addr), network.at("prefix-length"), data);
     }
+    */
 
     std::chrono::system_clock::time_point start, now;
     uint64_t real_time;
@@ -195,8 +202,8 @@ int main(){
 
         now = std::chrono::system_clock::now();
         real_time = std::chrono::duration_cast<std::chrono::microseconds>(now-start).count();
-        if(100 > real_time){ // もしこのループにかかった時間が0.0001秒未満なら
-            usleep(100 - real_time); //　0.0001秒に満たない時間分ループが終わるのを待つ
+        if(LOOP_MINIMUM_US > real_time){ // もしこのループにかかった時間がLOOP_MINIMUM_US未満なら
+            usleep(LOOP_MINIMUM_US - real_time); //　LOOP_MINIMUM_USに満たない時間分ループが終わるのを待つ
         }
     }
 
@@ -208,6 +215,7 @@ int main(){
     for(auto & peer : peers){
         free(peer.adj_ribs_in); // root自体はまだ解放されていないのでここで
     }
+    delete_prefix(bgp_loc_rib);
     printf("Safety exited\n");
     return EXIT_SUCCESS;
 }

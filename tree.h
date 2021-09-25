@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <arpa/inet.h>
 
 template <typename DATA_TYPE>
 struct node{
@@ -57,31 +58,28 @@ void delete_prefix(node<DATA_TYPE>* prefix, bool is_delete_child_prefix = false)
     if(is_delete_child_prefix and prefix->node_0 != nullptr and prefix->node_1 == nullptr){
         return delete_prefix(prefix->node_0, true);
     }
-    node<DATA_TYPE>* tmp;
+    node<DATA_TYPE>* tmp1;
     if(is_delete_child_prefix and prefix->node_1 != nullptr and prefix->node_0 != nullptr){
-        /*
-        tmp = prefix->node_1; tmpをnode_1にするとなぜか全経路削除の時に free(): double free detected in tcache 2 でAbortedする
-        prefix->node_1 = nullptr; 追記: いや、今でも発生する
-        */
-        tmp = prefix->node_0;
-        tmp->parent = nullptr;
+        tmp1 = prefix->node_0;
+        tmp1->parent = nullptr;
         prefix->node_0 = nullptr;
         delete_prefix(prefix, true);
-        return delete_prefix(tmp, true);
+        return delete_prefix(tmp1, true);
     }
+    node<DATA_TYPE>* tmp2;
     node<DATA_TYPE>* current = prefix;
     while(!current->is_prefix and current->parent != nullptr and (current->parent->node_0 == nullptr or current->parent->node_1 == nullptr)){
 #ifdef TEST_RIB_TREE_TEST_TREE
         printf("Release: %s/%d, %p\n", inet_ntoa(in_addr{.s_addr = htonl(current->prefix)}), current->prefix_len, current);
 #endif
-        tmp = current->parent;
+        tmp2 = current->parent;
         if(current->parent->node_1 == current){
             current->parent->node_1 = nullptr;
         }else{
             current->parent->node_0 = nullptr;
         }
         free(current);
-        current = tmp;
+        current = tmp2;
     }
 }
 

@@ -1,5 +1,6 @@
 {
   "my_as": 64496,
+  "router-id": "172.16.1.2",
   "neighbors": [
     {
       "address": "172.16.1.1",
