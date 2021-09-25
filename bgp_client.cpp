@@ -117,6 +117,11 @@ bool loop_established(bgp_client_peer* peer){
                         read_length++;
                         read_length += capability_length;
                         log(log_level::INFO, "Capability type : %d", capability_type);
+                        switch(capability_type){
+                            case bgp_capability_code::SUPPORT_FOR_4_OCTET_AS_NUMBER_CAPABILITY:
+                                peer->is_4_octet_as_supported = true;
+                                log(log_level::INFO, "Supported 4-octet AS number!");
+                        }
                     }
                         break;
                     default:
@@ -170,7 +175,7 @@ bool loop_established(bgp_client_peer* peer){
             a.as_path[0] = 65017;
             a.next_hop = inet_addr("172.16.3.1");
             a.med = 100;
-            send_update_with_nlri(peer, &a, inet_addr("192.0.2.0"), 24);
+            //send_update_with_nlri(peer, &a, inet_addr("192.0.2.0"), 24);
         }
             break;
         default:

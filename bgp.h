@@ -11,6 +11,7 @@ struct adj_ribs_in_data; // from bgp_rib.h
 class bgp_peer{
 public:
     uint8_t state = 0;
+    bool is_4_octet_as_supported = false;
     node<adj_ribs_in_data>* adj_ribs_in = nullptr;
     uint32_t bgp_id = 0;
     uint32_t route_count = 0;
@@ -89,7 +90,8 @@ enum bgp_open_optional_parameter_type{
 enum bgp_capability_code{
     MULTIPROTOCOL_EXTENSION_FOR_BGP4 = 1,
     ROUTE_REFRESH_CAPABILITY_FOR_BGP4 = 2,
-    OUTBOUND_ROUTE_FILTERING_CAPABILITY = 3
+    OUTBOUND_ROUTE_FILTERING_CAPABILITY = 3,
+    SUPPORT_FOR_4_OCTET_AS_NUMBER_CAPABILITY = 65
 };
 
 enum bgp_path_attribute_flag{

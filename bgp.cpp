@@ -14,6 +14,7 @@
 #define BGP_HOLD_TIME 180
 
 #define BGP_HEADER_SIZE 19
+#define BGP_OPEN_MESSAGE_SIZE 29
 
 void hex_dump(unsigned char* buffer, int len, bool is_separate){
     if(console_mode == 1){
@@ -122,22 +123,48 @@ bool send_update_with_nlri(bgp_peer* peer, attributes* attr, uint32_t prefix, ui
     header.type = UPDATE;
     header.length = htons(pointer);
     memcpy(&buffer[0], &header, BGP_HEADER_SIZE);
-    hex_dump(buffer, pointer);
+    //hex_dump(buffer, pointer);
     return peer->send(buffer, pointer);
 }
 
+size_t encode_bgp_capabilities_to_buffer(unsigned char* buffer, size_t start_point){
+    size_t pointer = start_point;
+
+    /** 4-octet AS number **/
+    buffer[pointer++] = CAPABILITIES;
+    buffer[pointer++] = 6;
+    buffer[pointer++] = SUPPORT_FOR_4_OCTET_AS_NUMBER_CAPABILITY;
+    buffer[pointer++] = 4;
+    uint32_t asn = htonl(my_as);
+    memcpy(&buffer[pointer], &asn, 4);
+    pointer += 4;
+
+    return pointer - start_point;
+}
+
+
 bool send_open(bgp_peer* peer){
+
+    unsigned char buffer[1000];
+    memset(buffer, 0, 1000);
+    uint16_t pointer = BGP_OPEN_MESSAGE_SIZE;
+
+    uint16_t opt_len = encode_bgp_capabilities_to_buffer(buffer, pointer);
+    pointer += opt_len;
+
     bgp_open open;
     memset(open.header.maker, 0xff, 16);
-    open.header.length = htons(29);
+    open.header.length = htons(pointer);
     open.header.type = OPEN;
     open.version = BGP_VERSION;
     open.my_as = htons(my_as);
     open.hold_time = htons(BGP_HOLD_TIME);
     open.bgp_id = htonl(router_id);
-    open.opt_length = 0;
+    open.opt_length = opt_len;
 
-    return peer->send(&open, 29);
+    memcpy(&buffer[0], &open, BGP_OPEN_MESSAGE_SIZE);
+    hex_dump(buffer, pointer);
+    return peer->send(buffer, pointer);
 }
 
 bool bgp_update_handle_unfeasible_prefix(bgp_peer* peer, const unsigned char* buff, uint16_t unfeasible_routes_length){
@@ -211,19 +238,36 @@ bool bgp_update_handle_path_attribute(bgp_peer* peer, const unsigned char* buff,
                 uint8_t segment_length = buff[read_length + 1];
                 if(segment_type == bgp_path_attribute_as_path_segment_type::AS_SEQUENCE){
                     std::string as_list_str;
+                    bool is_overflowed = false;
                     for(int i = 0; i < segment_length; i++){
-                        uint16_t asn;
-                        memcpy(&asn, &buff[read_length + 2 + i * 2], 2);
-                        asn = ntohs(asn);
                         std::ostringstream oss;
-                        oss << asn;
                         as_list_str.append(" ");
-                        as_list_str.append(oss.str());
-                        if(route_data.path_attr.as_path_length < 64){
-                            route_data.path_attr.as_path[route_data.path_attr.as_path_length++] = asn;
+                        if(peer->is_4_octet_as_supported){
+                            uint32_t asn;
+                            memcpy(&asn, &buff[read_length + 2 + i * 4], 4);
+                            asn = ntohl(asn);
+                            oss << asn;
+                            if(route_data.path_attr.as_path_length < 64){
+                                route_data.path_attr.as_path[route_data.path_attr.as_path_length++] = asn;
+                            }else{
+                                is_overflowed = true;
+                            }
                         }else{
-                            log(log_level::WARNING, "Overflowed AS PATH %d", segment_length);
+                            uint16_t asn;
+                            memcpy(&asn, &buff[read_length + 2 + i * 2], 2);
+                            asn = ntohs(asn);
+                            oss << asn;
+                            if(route_data.path_attr.as_path_length < 64){
+                                route_data.path_attr.as_path[route_data.path_attr.as_path_length++] = asn;
+                            }else{
+                                is_overflowed = true;
+                            }
                         }
+                        as_list_str.append(oss.str());
+                    }
+                    if(is_overflowed){
+                        log(log_level::WARNING, "Overflowed AS PATH %d", segment_length);
+
                     }
                     log(log_level::INFO, "AS Path%s", as_list_str.c_str());
                 }else{
