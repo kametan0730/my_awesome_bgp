@@ -21,7 +21,6 @@ bool bgp_client_peer::send(void* buffer, size_t length){
     return true;
 }
 
-
 bool try_to_connect(bgp_client_peer* peer){
     peer->server_address.sin_port = getservbyname("bgp", "tcp")->s_port;
     if((peer->sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0){
@@ -41,7 +40,7 @@ bool try_to_connect(bgp_client_peer* peer){
     set_nonblocking(peer->sock);
     log(log_level::INFO, "Connected to %s", inet_ntoa(peer->server_address.sin_addr));
 
-    //send_open(peer);
+    // send_open(peer);
     return true;
 }
 

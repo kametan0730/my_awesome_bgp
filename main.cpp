@@ -71,7 +71,7 @@ int main(){
     log(log_level::INFO, "My AS: %d", my_as);
 
     router_id = ntohl(inet_addr(conf_json.at("router-id").get<std::string>().c_str()));
-    log(log_level::INFO, "Router-ID: %d", router_id);
+    log(log_level::INFO, "Router-ID: %d", htonl(router_id));
 
     bgp_loc_rib = (node<loc_rib_data>*) malloc(sizeof(node<loc_rib_data>));
     if(bgp_loc_rib == nullptr){
@@ -167,10 +167,10 @@ int main(){
                                 }
                                 attributes a;
                                 a.origin = IGP;
-                                a.as_path_length = 1;
-                                a.as_path[0] = my_as;
+                                a.as_path_length = 0;
                                 a.next_hop = inet_addr("172.16.3.0");
                                 a.med = 100;
+                                a.local_pref = 0;
                                 send_update_with_nlri(&peers[i], &a, address.s_addr, network.at("prefix-length"));
                             }
                         }
