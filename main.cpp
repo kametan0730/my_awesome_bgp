@@ -131,9 +131,9 @@ int main(){
                         raise(SIGINT);
                     }else if(input == 'c'){
                         console_mode = 1;
-                        //for(int i = 0; i < 1000; ++i){
-                        //    getchar(); // 連続入力の対策はしているが、もしかすると連続する文字列がcから始まるかもしれない. その場合、対策をすり抜けてしまうのでへんなコマンドが実行されないようにここでバッファをクリアする
-                        //}
+                        for(int i = 0; i < 1000; ++i){
+                            getchar(); // 連続入力の対策はしているが、もしかすると連続する文字列がcから始まるかもしれない. その場合、対策をすり抜けてしまうのでへんなコマンドが実行されないようにここでバッファをクリアする
+                        }
                         printf("Switched to command mode\n");
                     }
                 }
@@ -175,15 +175,17 @@ int main(){
                             }
                         }
                     }else{
-                        if(!execute_command(cmd_str)){
+                        command_result_status command_result = execute_command(cmd_str);
+                        if(command_result == command_result_status::NOT_FOUND){
                             console("Command not found");
+                        }else if(command_result == command_result_status::INVALID_PARAMS){
+                            console("Invalid parameters");
                         }
                     }
                     cmd_str.clear();
                     if(console_mode == 1){ // Exitされていないなら
                         printf("> ");
                     }
-
                 }
             }
         }

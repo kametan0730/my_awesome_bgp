@@ -42,7 +42,7 @@ bool attempt_to_install_bgp_loc_rib(bgp_peer* my_peer, node<adj_ribs_in_data>* r
         if(installed_route != nullptr){
             installed_route->data->source_adj_ribs_in_node->data->installed_loc_rib_node = nullptr; // adj_ribs_inに、経路が上書きされてあなたのとこの情報はもはや利用されてないことを伝える
             delete_prefix(installed_route);
-            log(log_level::INFO, "Loc_rib updated");
+            // log(log_level::INFO, "Loc_rib updated");
         }
         loc_rib_data data;
         data.peer = my_peer;

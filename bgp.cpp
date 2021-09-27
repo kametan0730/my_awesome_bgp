@@ -58,12 +58,13 @@ size_t encode_bgp_path_attributes_to_buffer(bgp_peer* peer, attributes* attr, un
     flag |= EXTENDED_LENGTH;
     buffer[pointer++] = flag;
     buffer[pointer++] = AS_PATH;
+    uint16_t ex_len;
     if(attr->as_path_length == 0){
-        uint16_t ex_len = 0;
+        ex_len = 0;
         memcpy(&buffer[pointer], &ex_len, 2);
         pointer += 2;
     }else{
-        uint16_t ex_len = htons(attr->as_path_length * ((peer->is_4_octet_as_supported) ? 4 : 2) + 2);
+        ex_len = htons(attr->as_path_length * ((peer->is_4_octet_as_supported) ? 4 : 2) + 2);
         memcpy(&buffer[pointer], &ex_len, 2);
         pointer += 2;
         buffer[pointer++] = AS_SEQUENCE;
@@ -106,7 +107,7 @@ size_t encode_bgp_path_attributes_to_buffer(bgp_peer* peer, attributes* attr, un
     buffer[pointer++] = LOCAL_PREF;
     buffer[pointer++] = 4;
     uint32_t local_pref = htonl(attr->local_pref);
-    memcpy(&buffer[pointer], &med, 4);
+    memcpy(&buffer[pointer], &local_pref, 4);
     pointer += 4;
 
     return pointer - start_point;
@@ -158,10 +159,11 @@ size_t encode_bgp_capabilities_to_buffer(unsigned char* buffer, size_t start_poi
     buffer[pointer++] = 6;
     buffer[pointer++] = MULTIPROTOCOL_EXTENSION_FOR_BGP4;
     buffer[pointer++] = 4;
-    buffer[pointer++] = 0;
-    buffer[pointer++] = 1;
-    buffer[pointer++] = 0;
-    buffer[pointer++] = 1;
+    uint16_t afi = htons(afi::IPV4);
+    memcpy(&buffer[pointer], &afi, 2);
+    pointer += 2;
+    buffer[pointer++] = 0; // Reserved
+    buffer[pointer++] = safi::UNICAST;
 
     /** 4-octet AS number **/
     buffer[pointer++] = CAPABILITIES;
@@ -403,7 +405,7 @@ bool bgp_update(bgp_peer* peer,  unsigned char* buff, int entire_length){
             log(log_level::ERROR, "Invalid packet");
             break;
         }
-        //log(log_level::DEBUG, "%s/%d", inet_ntoa(in_addr{.s_addr=ntohl(prefix)}), prefix_len);
+        log(log_level::DEBUG, "%s/%d", inet_ntoa(in_addr{.s_addr=ntohl(prefix)}), prefix_len);
         bool is_updated;
         node<adj_ribs_in_data>* added = add_prefix(peer->adj_ribs_in, prefix, prefix_len, route_data, &is_updated);
         if(!is_updated){

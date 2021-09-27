@@ -27,6 +27,16 @@ enum bgp_peer_state{
     ESTABLISHED,
 };
 
+enum afi{
+    IPV4 = 1,
+    IPV6 = 2,
+};
+
+enum safi{
+    UNICAST = 1,
+    MULTICAST = 2,
+};
+
 // https://www.iana.org/assignments/bgp-parameters/bgp-parameters.xhtml
 
 enum bgp_message_type{
