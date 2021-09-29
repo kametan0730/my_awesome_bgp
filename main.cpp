@@ -70,8 +70,8 @@ int main(){
     my_as = conf_json.at("my_as").get<int>();
     log(log_level::INFO, "My AS: %d", my_as);
 
-    router_id = ntohl(inet_addr(conf_json.at("router-id").get<std::string>().c_str()));
-    log(log_level::INFO, "Router-ID: %d", htonl(router_id));
+    router_id = inet_addr(conf_json.at("router-id").get<std::string>().c_str());
+    log(log_level::INFO, "Router-ID: %s", inet_ntoa(in_addr{.s_addr = router_id}));
 
     bgp_loc_rib = (node<loc_rib_data>*) malloc(sizeof(node<loc_rib_data>));
     if(bgp_loc_rib == nullptr){
@@ -109,7 +109,7 @@ int main(){
         root->node_0 = nullptr;
         root->node_1 = nullptr;
         peer.adj_ribs_in = root;
-        peer.connect_cool_time = 0;
+        peer.connect_cool_loop_time = 0;
         peers.push_back(peer);
     }
 
@@ -135,6 +135,7 @@ int main(){
                             getchar(); // 連続入力の対策はしているが、もしかすると連続する文字列がcから始まるかもしれない. その場合、対策をすり抜けてしまうのでへんなコマンドが実行されないようにここでバッファをクリアする
                         }
                         printf("Switched to command mode\n");
+                        printf("> ");
                     }
                 }
                 is_input_continuous = true;

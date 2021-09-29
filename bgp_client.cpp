@@ -95,12 +95,10 @@ bool loop_established(bgp_client_peer* peer){
             log(log_level::INFO, "BGP Id: %d", ntohl(bgpopp->bgp_id));
             log(log_level::INFO, "Opt Length: %d", bgpopp->opt_length);
 
-            /*
             if(ntohs(bgpopp->my_as) != peer->remote_as){
                 send_notification(peer, bgp_error_code::OPEN_MESSAGE_ERROR, bgp_error_sub_code_open::BAD_PEER_AS);
                 return false;
             }
-            */
 
             int read_length = 29;
             while(read_length < 29 + bgpopp->opt_length){
@@ -117,9 +115,12 @@ bool loop_established(bgp_client_peer* peer){
                         read_length += capability_length;
                         log(log_level::INFO, "Capability type : %d", capability_type);
                         switch(capability_type){
+                            case bgp_capability_code::MULTIPROTOCOL_EXTENSION_FOR_BGP4:
+                                break;
                             case bgp_capability_code::SUPPORT_FOR_4_OCTET_AS_NUMBER_CAPABILITY:
                                 peer->is_4_octet_as_supported = true;
                                 log(log_level::INFO, "Supported 4-octet AS number!");
+                                break;
                         }
                     }
                         break;
@@ -180,15 +181,15 @@ bool loop_established(bgp_client_peer* peer){
 bool bgp_client_loop(bgp_client_peer* peer){
     switch(peer->state){
         case IDLE:
-            if(peer->connect_cool_time == 0){
+            if(peer->connect_cool_loop_time == 0){
                 if(try_to_connect(peer)){
                     peer->state = OPEN_CONFIRM;
                 }else{
-                    peer->connect_cool_time = COOL_LOOP_TIME_CONNECTION_REFUSED;
+                    peer->connect_cool_loop_time = COOL_LOOP_TIME_CONNECTION_REFUSED;
                 }
-                peer->connect_cool_time = COOL_LOOP_TIME_PEER_DOWN;
+                peer->connect_cool_loop_time = COOL_LOOP_TIME_PEER_DOWN;
             }else{
-                peer->connect_cool_time--;
+                peer->connect_cool_loop_time--;
             }
             break;
         case OPEN_CONFIRM:

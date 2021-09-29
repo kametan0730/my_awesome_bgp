@@ -141,12 +141,6 @@ struct bgp_notification{
     unsigned char data[];
 } __attribute__((packed));
 
-struct bgp_path_attribute_common{
-    uint8_t flag;
-    uint8_t type;
-
-} __attribute__((packed));
-
 struct attributes;
 
 void hex_dump(unsigned char* buffer, int len, bool is_separate = false);

@@ -193,11 +193,10 @@ bool send_open(bgp_peer* peer){
     open.version = BGP_VERSION;
     open.my_as = htons(my_as);
     open.hold_time = htons(BGP_HOLD_TIME);
-    open.bgp_id = htonl(router_id);
+    open.bgp_id = router_id;
     open.opt_length = opt_len;
 
     memcpy(&buffer[0], &open, BGP_OPEN_MESSAGE_SIZE);
-    hex_dump(buffer, pointer);
     return peer->send(buffer, pointer);
 }
 
@@ -332,6 +331,23 @@ bool bgp_update_handle_path_attribute(bgp_peer* peer, const unsigned char* buff,
                 break;
             case ATOMIC_AGGREGATE:
                 log(log_level::INFO, "Atomic Aggregate");
+                break;
+            case AGGREGATOR:
+            {
+                uint32_t asn;
+                if(peer->is_4_octet_as_supported){
+                    memcpy(&asn, &buff[read_length], 4);
+                    read_length += 4;
+                }else{
+                    uint16_t asn_2;
+                    memcpy(&asn_2, &buff[read_length], 2);
+                    read_length += 2;
+                    asn = asn_2;
+                }
+                uint32_t address;
+                memcpy(&address, &buff[read_length], 4);
+                log(log_level::INFO, "Aggregator %d, %s", asn, inet_ntoa(in_addr{.s_addr = address}));
+            }
                 break;
             case AS4_PATH:
             {

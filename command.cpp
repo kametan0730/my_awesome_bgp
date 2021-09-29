@@ -18,8 +18,29 @@ bgp_peer* get_peer_by_string(const std::string& search){
     return nullptr;
 }
 
+std::string as_path_to_string(uint32_t* as_path_list, uint8_t as_path_length){
+    std::string as_path_str;
+    for(int j = 0; j < as_path_length; ++j){
+        std::ostringstream oss;
+        oss << as_path_list[j];
+        as_path_str.append(oss.str());
+        if(j != as_path_length-1){
+            as_path_str.append(" ");
+        }
+    }
+    return as_path_str;
+}
+
+command_result_status count_command(){
+    for(int i = 0; i < peers.size(); ++i){
+        console("Peer %d received %d routes", i, peers[i].route_count);
+    }
+    return command_result_status::SUCCESS;
+}
+
 command_result_status route_command(const std::vector<std::string>& command_params){
-    if(command_params.size() <= 1){
+    size_t param_count = command_params.size();
+    if(param_count <= 1){
         return command_result_status::INVALID_PARAMS;
     }
     node<loc_rib_data>* res = search_prefix(bgp_loc_rib, ntohl(inet_addr(command_params[1].c_str()))); // TODO 入力値検証
@@ -51,10 +72,7 @@ command_result_status execute_command(const std::string& command){
     size_t param_count = command_params.size();
 
     if(command_params[0] == "count"){
-        for(int i = 0; i < peers.size(); ++i){
-            console("Peer %d received %d routes", i, peers[i].route_count);
-        }
-        return command_result_status::SUCCESS;
+        return count_command();
     }else if(command_params[0] == "route"){
         if(param_count >= 2){
             for(int i = 0; i < peers.size(); ++i){
@@ -62,19 +80,12 @@ command_result_status execute_command(const std::string& command){
                 char prefix[16];
                 char next_hop[16];
                 if(res->is_prefix and res->data != nullptr){ // TODO is_prefixがtrueでdataがnullptrの時がどのような場合かよく考える
-                    std::string as_path_str;
-                    for(int j = 0; j < res->data->path_attr.as_path_length; ++j){
-                        std::ostringstream oss;
-                        oss << res->data->path_attr.as_path[j];
-                        as_path_str.append(oss.str());
-                        as_path_str.append(" ");
-                    }
                     memcpy(&prefix, inet_ntoa(in_addr{.s_addr = htonl(res->prefix)}), 16);
                     memcpy(&next_hop, inet_ntoa(in_addr{.s_addr = htonl(res->data->path_attr.next_hop)}), 16);
                     console("%s/%d  origin %d, nexthop %s, med %d, local-pref %d, peer %d", prefix, res->prefix_len,
                             res->data->path_attr.origin, next_hop, res->data->path_attr.med,
                             res->data->path_attr.local_pref, i);
-                    console("as-path %slength %d", as_path_str.c_str(), res->data->path_attr.as_path_length);
+                    console("as-path %s, length %d", as_path_to_string(res->data->path_attr.as_path, res->data->path_attr.as_path_length).c_str(), res->data->path_attr.as_path_length);
                 }
             }
 
@@ -87,6 +98,7 @@ command_result_status execute_command(const std::string& command){
                 console("%s/%d  origin %d, nexthop %s, med %d, local-pref %d, loc_rib", prefix, res->prefix_len,
                         res->data->path_attr->origin, next_hop, res->data->path_attr->med,
                         res->data->path_attr->local_pref);
+                console("as-path %s, length %d", as_path_to_string(res->data->path_attr->as_path, res->data->path_attr->as_path_length).c_str(), res->data->path_attr->as_path_length);
             }
 
             return command_result_status::SUCCESS;
