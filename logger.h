@@ -35,8 +35,7 @@ void log(log_level level, const char *format, Args const & ... args){
         return;
     }
     if(level == log_level::ERROR){
-        printf("\e[31m");
-        fprintf(stderr, "[ERROR][%d] ", log_id);
+        fprintf(stderr, "\e[31m[ERROR][%d] ", log_id);
         fprintf(stderr, format, args...);
         fprintf(stderr, "\n");
         return;
