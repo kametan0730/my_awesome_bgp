@@ -10,6 +10,7 @@ struct adj_ribs_in_data; // from bgp_rib.h
 
 class bgp_peer{
 public:
+    uint8_t index = 0;
     uint8_t state = 0;
     bool is_4_octet_as_supported = false;
     node<adj_ribs_in_data>* adj_ribs_in = nullptr;

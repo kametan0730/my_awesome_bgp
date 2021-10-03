@@ -35,7 +35,12 @@ void log(log_level level, const char *format, Args const & ... args){
         return;
     }
     if(level == log_level::ERROR){
-        fprintf(stderr, "\e[31m[ERROR][%d] ", log_id);
+        if(log_id == 0xff){
+            fprintf(stderr, "\e[31m[ERROR] ");
+
+        }else{
+            fprintf(stderr, "\e[31m[ERROR][%d] ", log_id);
+        }
         fprintf(stderr, format, args...);
         fprintf(stderr, "\n");
         return;
@@ -65,7 +70,9 @@ void log(log_level level, const char *format, Args const & ... args){
         case log_level::ERROR:
             break;
     }
-    printf("[%d] ", log_id);
+    if(log_id != 0xff){
+        printf("[%d] ", log_id);
+    }
     printf(format, args ...);
     printf("\n");
 }

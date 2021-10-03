@@ -15,3 +15,11 @@ My Awesome BGPはSeccamp2021で開発しているBGPのソフトウェアです�
 - [ ] 受信した経路の再広告
 - [x] 経路の取り消しの受信
 - [x] ４オクテットAS番号
+- [ ] プレフィックスリスト
+
+## コマンド
+|コマンド|内容|
+|---|---|
+|bgp statistics|統計情報を表示|
+|bgp route IP|BGPテーブルの経路情報を表示|
+|bgp neighbor PEER route IP|ピアの経路情報を表示|

@@ -86,8 +86,10 @@ int main(){
     bgp_loc_rib->node_0 = nullptr;
     bgp_loc_rib->node_1 = nullptr;
 
-    for(auto &neighbor: conf_json.at("neighbors")){
+    for(int i=0;i<conf_json.at("neighbors").size();i++){
+        auto neighbor = conf_json.at("neighbors")[i];
         bgp_client_peer peer;
+        peer.index = i;
         peer.sock = 0;
         peer.remote_as = neighbor.at("remote-as");
         peer.state = ACTIVE;
@@ -110,7 +112,7 @@ int main(){
         root->node_1 = nullptr;
         peer.adj_ribs_in = root;
         peer.connect_cool_loop_time = 0;
-        peers.push_back(peer);
+        peers.push_back(peer); // これ、よく見るとブロック抜けたらpeerのメモリ解放されそうだけど、今のところこれで問題が起きたことがないのはなぜだろう
     }
 
     std::chrono::system_clock::time_point start, now;
@@ -192,11 +194,11 @@ int main(){
         }
 
         for(int i = 0; i < peers.size(); ++i){
-            log_id = i + 1;
+            log_id = i;
             if(!bgp_client_loop(&peers[i])){
             }
         }
-        log_id = 0;
+        log_id = 0xff;
 
         now = std::chrono::system_clock::now();
         real_time = std::chrono::duration_cast<std::chrono::microseconds>(now-start).count();
